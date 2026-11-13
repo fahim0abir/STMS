@@ -41,7 +41,7 @@ jobs:
 
       # --- 3. MERGE ASSETS ---
       - name: Copy Angular Build to iis
-        shell: pwsh
+        shell: powershell
         run: |
-          # Copies built Angular files directly into the iis folder
-          Copy-Item -Recurse -Force ./Client/dist/your-angular-app/browser/* C:/inetpub/STMS.Client
+          Remove-Item -Recurse -Force C:/inetpub/STMS.Client/*
+          Copy-Item -Recurse -Force ./Client/dist/smart-task-ui/* C:/inetpub/STMS.Client/
