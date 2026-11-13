@@ -56,6 +56,9 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.")));
 
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<ApplicationDbContext>("database");
+
 builder.Services.AddScoped<IRepository<SmartTask.Domain.Entities.User>, Repository<SmartTask.Domain.Entities.User>>();
 builder.Services.AddScoped<IRepository<SmartTask.Domain.Entities.Project>, Repository<SmartTask.Domain.Entities.Project>>();
 builder.Services.AddScoped<IRepository<SmartTask.Domain.Entities.TaskItem>, Repository<SmartTask.Domain.Entities.TaskItem>>();
@@ -136,11 +139,7 @@ app.UseAuthorization();
 app.UseRateLimiter();
 
 app.MapControllers();
-app.MapGet("/health", async (ApplicationDbContext db) =>
-{
-    var connected = await db.Database.CanConnectAsync();
-    return connected ? Results.Ok("OK") : Results.Problem("Database unavailable", statusCode: 503);
-});
+app.MapHealthChecks("/health");
 
 using (var scope = app.Services.CreateScope())
 {

@@ -4,5 +4,5 @@ namespace SmartTask.Application.Interfaces;
 
 public interface ITaskDescriptionEnhancementService
 {
-    Task<string> EnhanceAsync(string description);
+    Task<EnhanceDescriptionResponseDto> EnhanceAsync(EnhanceDescriptionRequestDto request, CancellationToken cancellationToken = default);
 }

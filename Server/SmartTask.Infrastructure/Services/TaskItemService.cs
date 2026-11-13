@@ -33,6 +33,7 @@ public class TaskItemService : ITaskItemService
             Status = createDto.Status,
             Priority = createDto.Priority,
             AssigneeId = createDto.AssigneeId,
+            DueAt = createDto.DueAt,
             CreatedAt = DateTime.UtcNow
         };
         await _taskRepository.AddAsync(taskItem);
@@ -85,7 +86,12 @@ public class TaskItemService : ITaskItemService
             Description = t.Description,
             Status = t.Status,
             Priority = t.Priority,
-            AssigneeEmail = t.Assignee != null ? t.Assignee.Email : null
+            AssigneeEmail = t.Assignee != null ? t.Assignee.Email : null,
+            ProjectId = t.ProjectId,
+            AssigneeId = t.AssigneeId,
+            DueAt = t.DueAt,
+            CreatedAt = t.CreatedAt,
+            UpdatedAt = t.UpdatedAt
         });
 
         return await dtoQuery.ToPagedResultAsync(query.PageNumber, query.PageSize);
@@ -101,6 +107,18 @@ public class TaskItemService : ITaskItemService
         taskItem.Status = createDto.Status;
         taskItem.Priority = createDto.Priority;
         taskItem.AssigneeId = createDto.AssigneeId;
+        taskItem.DueAt = createDto.DueAt;
+        taskItem.UpdatedAt = DateTime.UtcNow;
+        await _taskRepository.SaveChangesAsync();
+    }
+
+    public async Task UpdateStatusAsync(Guid id, SmartTask.Domain.Enums.TaskStatus status)
+    {
+        var taskItem = await _taskRepository.GetByIdAsync(id);
+        if (taskItem == null)
+            throw new NotFoundException(nameof(TaskItem), id);
+
+        taskItem.Status = status;
         taskItem.UpdatedAt = DateTime.UtcNow;
         await _taskRepository.SaveChangesAsync();
     }
@@ -117,11 +135,16 @@ public class TaskItemService : ITaskItemService
     private static TaskItemDto Map(TaskItem t, string assigneeEmail) => new()
     {
         Id = t.Id,
+        ProjectId = t.ProjectId,
         Title = t.Title,
         Description = t.Description,
         Status = t.Status,
         Priority = t.Priority,
-        AssigneeEmail = assigneeEmail
+        AssigneeId = t.AssigneeId,
+        AssigneeEmail = assigneeEmail,
+        DueAt = t.DueAt,
+        CreatedAt = t.CreatedAt,
+        UpdatedAt = t.UpdatedAt
     };
 
     private static IQueryable<TaskItem> ApplyRoleFilter(IQueryable<TaskItem> q, Role role, Guid currentUserId)

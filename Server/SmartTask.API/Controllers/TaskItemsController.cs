@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SmartTask.Application.DTOs;
 using SmartTask.Application.Interfaces;
+using SmartTask.Domain.Enums;
 
 namespace SmartTask.API.Controllers;
 
@@ -73,6 +74,32 @@ public class TaskItemsController : ControllerBase
     {
         await _taskItemService.DeleteAsync(id);
         return Ok(ApiResponse<object>.Ok(null, "Task item deleted."));
+    }
+
+    [HttpPatch("{id:guid}/status")]
+    public async Task<ActionResult<ApiResponse<object>>> UpdateStatusAsync(Guid id, [FromBody] TaskStatusUpdateDto statusDto)
+    {
+        if (!Enum.IsDefined(statusDto.Status))
+        {
+            return BadRequest(ApiResponse<object>.Error("Unknown task status.", 400));
+        }
+
+        var taskItem = await _taskItemService.GetByIdAsync(id);
+        if (taskItem == null)
+        {
+            return NotFound(ApiResponse<object>.Error("Task item not found.", 404));
+        }
+
+        var role = GetUserRole();
+        var isManager = role is "Admin" or "ProjectManager";
+        var isAssignee = taskItem.AssigneeId.HasValue && taskItem.AssigneeId.Value == GetUserId();
+        if (!isManager && !isAssignee)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, ApiResponse<object>.Error("Only the assignee or a manager can change this task status.", 403));
+        }
+
+        await _taskItemService.UpdateStatusAsync(id, statusDto.Status);
+        return Ok(ApiResponse<object>.Ok(null, "Task status updated."));
     }
 
     private Guid GetUserId() => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);

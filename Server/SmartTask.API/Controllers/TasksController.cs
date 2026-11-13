@@ -31,21 +31,32 @@ public class TasksController : ControllerBase
     }
 
     /// <summary>
-    /// Enhances a task description using AI for grammar, clarity, and professional tone.
+    /// Enhances a task description using AI for grammar, clarity, and a structured, actionable definition.
     /// </summary>
-    /// <param name="request">The description to enhance (5-1,000 characters).</param>
-    /// <returns>The enhanced description.</returns>
+    /// <param name="request">The description to enhance (20-4,000 characters) with optional title and context.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>Structured enhancement result (description, title, acceptance criteria, subtasks, priority, estimate).</returns>
     [HttpPost("enhance-description")]
     [EnableRateLimiting("enhance")]
-    public async Task<ActionResult<ApiResponse<string>>> EnhanceDescriptionAsync([FromBody] EnhanceDescriptionRequestDto request)
+    public async Task<ActionResult<ApiResponse<EnhanceDescriptionResponseDto>>> EnhanceDescriptionAsync([FromBody] EnhanceDescriptionRequestDto request, CancellationToken cancellationToken)
     {
-        var validationResult = await _enhanceValidator.ValidateAsync(request);
+        var validationResult = await _enhanceValidator.ValidateAsync(request, cancellationToken);
         if (!validationResult.IsValid)
         {
-            return BadRequest(ApiResponse<string>.Error(string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage)), 400));
+            return BadRequest(ApiResponse<EnhanceDescriptionResponseDto>.Error(string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage)), 400));
         }
 
-        var enhanced = await _enhancementService.EnhanceAsync(request.Description);
-        return Ok(ApiResponse<string>.Ok(enhanced, "Description enhanced."));
+        try
+        {
+            var result = await _enhancementService.EnhanceAsync(request, cancellationToken);
+            var message = result.UsedFallback
+                ? "Description enhanced with the local fallback (AI provider unavailable)."
+                : "Description enhanced.";
+            return Ok(ApiResponse<EnhanceDescriptionResponseDto>.Ok(result, message));
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return StatusCode(StatusCodes.Status504GatewayTimeout, ApiResponse<EnhanceDescriptionResponseDto>.Error("The AI provider did not respond in time. Please retry.", 504));
+        }
     }
 }

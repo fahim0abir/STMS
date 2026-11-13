@@ -9,7 +9,15 @@ public class EnhanceDescriptionRequestDtoValidator : AbstractValidator<EnhanceDe
     {
         RuleFor(x => x.Description)
             .NotEmpty()
-            .MinimumLength(5)
-            .MaximumLength(1000);
+            .MinimumLength(20)
+            .MaximumLength(4000);
+
+        RuleFor(x => x.Title)
+            .MaximumLength(200)
+            .When(x => !string.IsNullOrWhiteSpace(x.Title));
+
+        RuleFor(x => x.Context)
+            .MaximumLength(500)
+            .When(x => !string.IsNullOrWhiteSpace(x.Context));
     }
 }

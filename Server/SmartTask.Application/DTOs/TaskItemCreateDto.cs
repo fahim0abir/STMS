@@ -10,4 +10,5 @@ public record TaskItemCreateDto
     public TaskStatus Status { get; init; }
     public TaskPriority Priority { get; init; }
     public Guid? AssigneeId { get; init; }
+    public DateTime? DueAt { get; init; }
 };

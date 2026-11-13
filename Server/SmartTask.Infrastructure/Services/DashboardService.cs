@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using SmartTask.Application.DTOs;
 using SmartTask.Application.Interfaces;
 using SmartTask.Domain.Entities;
@@ -27,9 +27,9 @@ public class DashboardService : IDashboardService
 
         var totalProjects = await _projectRepository.AsQueryable().CountAsync();
         var totalTasks = await tasks.CountAsync();
-        var completedTasks = await tasks.CountAsync(t => t.Status == TaskStatus.Done);
-        var pendingTasks = await tasks.CountAsync(t => t.Status != TaskStatus.Done);
-        var upcomingDueTasks = await tasks.CountAsync(t => t.DueAt.HasValue && t.DueAt.Value > now && t.Status != TaskStatus.Done);
+        var completedTasks = await tasks.CountAsync(t => t.Status == TaskStatus.Completed);
+        var pendingTasks = await tasks.CountAsync(t => t.Status != TaskStatus.Completed);
+        var upcomingDueTasks = await tasks.CountAsync(t => t.DueAt.HasValue && t.DueAt.Value > now && t.Status != TaskStatus.Completed);
 
         var statusGroups = await tasks.GroupBy(t => t.Status.ToString())
             .Select(g => new { Status = g.Key, Count = g.Count() })
