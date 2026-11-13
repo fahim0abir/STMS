@@ -1,0 +1,26 @@
+# Build results
+bin/
+obj/
+
+# NuGet Packages
+packages/
+
+# Visual Studio cache
+.vs/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Logs
+*.log
+logs/
+
+# Sensitive configuration (secrets)
+appsettings.json
+appsettings.*.json
+
+# Committed configuration template (placeholders only)
+!SmartTask.API/appsettings.Example.json
