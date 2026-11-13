@@ -182,6 +182,8 @@ export class TasksComponent {
   }
 
   save(event: TaskModalSaveEvent): void {
+    if (this.saving()) return;
+
     const editing = this.editing();
     this.saving.set(true);
     this.modalError.set('');

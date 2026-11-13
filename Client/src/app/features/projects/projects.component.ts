@@ -119,6 +119,8 @@ export class ProjectsComponent {
   }
 
   save(dto: ProjectUpsert): void {
+    if (this.saving()) return;
+
     const editing = this.editing();
     this.saving.set(true);
     this.modalError.set('');

@@ -53,8 +53,15 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.")));
+if (builder.Environment.IsEnvironment("E2E"))
+{
+    builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseInMemoryDatabase("SmartTaskE2E"));
+}
+else
+{
+    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.")));
+}
 
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<ApplicationDbContext>("database");
@@ -107,20 +114,23 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddRateLimiter(options =>
 {
+    var configuredLimits = builder.Configuration.GetSection("RateLimiting");
+    var permit = (string key, int fallback) => configuredLimits.GetValue<int?>(key) ?? fallback;
+
     options.AddFixedWindowLimiter("default", opts =>
     {
         opts.Window = TimeSpan.FromMinutes(1);
-        opts.PermitLimit = 100;
+        opts.PermitLimit = permit("Default", 100);
     });
     options.AddFixedWindowLimiter("auth", opts =>
     {
         opts.Window = TimeSpan.FromMinutes(1);
-        opts.PermitLimit = 5;
+        opts.PermitLimit = permit("Auth", 5);
     });
     options.AddFixedWindowLimiter("enhance", opts =>
     {
         opts.Window = TimeSpan.FromMinutes(1);
-        opts.PermitLimit = 10;
+        opts.PermitLimit = permit("Enhance", 10);
     });
 });
 
@@ -148,4 +158,8 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.Run();
+
+public partial class Program
+{
+}
 

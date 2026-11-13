@@ -1,4 +1,4 @@
-﻿import { Component, inject, signal } from '@angular/core';
+﻿import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -18,6 +18,7 @@ export class RegisterComponent {
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly error = signal<string>('');
   readonly isLoading = signal<boolean>(false);
@@ -38,7 +39,7 @@ export class RegisterComponent {
     this.error.set('');
     this.authService
       .register(this.form.value as never)
-      .pipe(takeUntilDestroyed())
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => this.router.navigate(['/login']),
         error: (err) => {

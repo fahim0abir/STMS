@@ -218,6 +218,37 @@ never breaks. Prompt design, examples and safety notes are documented in `PROMPT
 | ProjectManager | `projectmanager@smarttask.dev` | `Pm123456!` |
 | TeamMember | `teammember@smarttask.dev` | `Tm123456!` |
 
+## Automated Tests
+
+### Backend end-to-end (`SmartTask.E2ETests`)
+
+xUnit tests that boot the real API pipeline with `WebApplicationFactory<Program>` and an EF Core InMemory database:
+
+```powershell
+cd Server
+dotnet test SmartTask.E2ETests\SmartTask.E2ETests.csproj
+```
+
+Covers auth (register/login/refresh/logout), RBAC (401/403), project and task CRUD with paging/filtering, dashboard aggregates, health probe and the AI enhancement endpoint (deterministic fallback when no `AI:GitHubModels:ApiKey` is configured).
+
+### Frontend end-to-end (Playwright)
+
+`Client/e2e` contains Playwright specs for login/register, project and task management, dashboard KPIs, AI suggestion acceptance and role-based UI restrictions.
+
+```powershell
+cd Client
+npm run e2e          # headless, starts API + ng serve automatically
+npm run e2e:headed   # headed Chrome
+npm run e2e:report   # open the HTML report
+```
+
+Prerequisites:
+
+- Google Chrome installed (Playwright uses `channel: 'chrome'`, so no browser download is required).
+- No other process on ports `5195` or `4200` (Stop the dev API before running).
+- The API is started in the `E2E` environment, which swaps SQL Server for an EF Core InMemory database seeded with the three demo users, so the SQL database is never touched.
+- `scripts/run-e2e.ps1` wraps the same flow if you prefer a single command from the repository root.
+
 ## Deliverables
 
 - Source code: this repository (`Server/`, `Client/`, `docs/`).
