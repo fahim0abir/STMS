@@ -1,0 +1,81 @@
+<div class="modal" *ngIf="open">
+  <div class="modal__backdrop" (click)="close.emit()"></div>
+  <div class="modal__panel" role="dialog" aria-modal="true">
+    <h2 class="modal__title">{{ isEdit ? 'Edit Task' : 'New Task' }}</h2>
+
+    <form [formGroup]="form" (ngSubmit)="submit()" class="modal__form">
+      <label class="modal__field" *ngIf="!isEdit">
+        <span>Project *</span>
+        <select formControlName="projectId">
+          <option value="">Select a project…</option>
+          <option *ngFor="let project of projects" [value]="project.id">{{ project.name }}</option>
+        </select>
+      </label>
+
+      <label class="modal__field">
+        <span>Title *</span>
+        <input type="text" formControlName="title" maxlength="200" />
+        <small class="modal__error" *ngIf="form.controls.title.touched && form.controls.title.invalid">
+          Title is required (max 200 characters).
+        </small>
+      </label>
+
+      <label class="modal__field">
+        <span>Description</span>
+        <textarea formControlName="description" rows="5" [attr.maxlength]="maxDescriptionLength"></textarea>
+        <small class="modal__hint">
+          {{ form.controls.description.value.length }}/{{ maxDescriptionLength }} characters
+        </small>
+      </label>
+
+      <div class="modal__ai">
+        <app-btn size="sm" variant="outline" [loading]="aiLoading()" (click)="improveWithAi()">
+          Improve with AI
+        </app-btn>
+        <app-btn size="sm" variant="ghost" *ngIf="canRevert()" (click)="revertDescription()">
+          Revert description
+        </app-btn>
+      </div>
+
+      <p class="modal__ai-message" [class.modal__ai-message--warn]="aiUsedFallback()" *ngIf="aiMessage()">
+        {{ aiMessage() }}
+      </p>
+
+      <div class="modal__suggestion" *ngIf="aiSuggestion() as suggestion">
+        <div class="modal__suggestion-head">
+          <span>AI suggestion ({{ suggestion.length }}/{{ maxDescriptionLength }})</span>
+        </div>
+        <p class="modal__suggestion-text">{{ suggestion }}</p>
+        <div class="modal__suggestion-actions">
+          <app-btn size="sm" variant="primary" (click)="acceptSuggestion()">Accept</app-btn>
+          <app-btn size="sm" variant="ghost" (click)="rejectSuggestion()">Reject</app-btn>
+        </div>
+      </div>
+
+      <div class="modal__row">
+        <label class="modal__field">
+          <span>Status</span>
+          <select formControlName="status">
+            <option *ngFor="let option of statusOptions" [value]="option.value">{{ option.label }}</option>
+          </select>
+        </label>
+
+        <label class="modal__field">
+          <span>Priority</span>
+          <select formControlName="priority">
+            <option *ngFor="let option of priorityOptions" [value]="option.value">{{ option.label }}</option>
+          </select>
+        </label>
+      </div>
+
+      <p class="modal__error" *ngIf="errorMessage">{{ errorMessage }}</p>
+
+      <div class="modal__actions">
+        <app-btn variant="ghost" (click)="close.emit()">Cancel</app-btn>
+        <app-btn variant="primary" [loading]="saving" (click)="submit()">
+          {{ isEdit ? 'Save Changes' : 'Create Task' }}
+        </app-btn>
+      </div>
+    </form>
+  </div>
+</div>

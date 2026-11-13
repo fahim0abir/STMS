@@ -1,0 +1,139 @@
+:host {
+  display: contents;
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgb(17 24 39 / 0.5);
+}
+
+.modal__panel {
+  position: relative;
+  background: #fff;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 560px;
+  max-height: 90dvh;
+  overflow-y: auto;
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.2);
+}
+
+.modal__title {
+  margin: 0 0 1rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.modal__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.modal__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.modal__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  font-size: 0.8rem;
+  color: #374151;
+
+  input,
+  textarea,
+  select {
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    font-family: inherit;
+    outline: none;
+    background: #fff;
+    color: #111827;
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgb(37 99 235 / 0.15);
+  }
+}
+
+.modal__hint {
+  font-size: 0.7rem;
+  color: #9ca3af;
+}
+
+.modal__error {
+  color: #b91c1c;
+  font-size: 0.75rem;
+  margin: 0;
+}
+
+.modal__ai {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.modal__ai-message {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #2563eb;
+}
+
+.modal__ai-message--warn {
+  color: #b45309;
+}
+
+.modal__suggestion {
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+}
+
+.modal__suggestion-head {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #1d4ed8;
+  margin-bottom: 0.375rem;
+}
+
+.modal__suggestion-text {
+  margin: 0 0 0.625rem;
+  font-size: 0.85rem;
+  color: #1f2937;
+  white-space: pre-wrap;
+}
+
+.modal__suggestion-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}

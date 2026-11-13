@@ -1,0 +1,95 @@
+<div class="tasks">
+  <div class="tasks__header">
+    <div>
+      <h1>Tasks</h1>
+      <p>Track and manage task items</p>
+    </div>
+    <app-btn *ngIf="canManage" variant="primary" (click)="openCreate()">New Task</app-btn>
+  </div>
+
+  <div class="tasks__filters">
+    <app-search-sort-bar
+      searchPlaceholder="Search tasks by title or description…"
+      [searchValue]="search()"
+      [sortBy]="sortBy()"
+      [sortOrder]="sortOrder()"
+      [sortOptions]="sortOptions"
+      (searchChange)="onSearch($event)"
+      (sortChange)="onSortField($event)"
+      (sortOrderChange)="onSortOrderChange($event)"
+    ></app-search-sort-bar>
+
+    <div class="tasks__chips">
+      <app-task-filter-chips
+        label="Status"
+        [chips]="statusChips()"
+        [active]="statusFilter()"
+        (activeChange)="onStatusChange($event)"
+      ></app-task-filter-chips>
+      <app-task-filter-chips
+        label="Priority"
+        [chips]="priorityChips()"
+        [active]="priorityFilter()"
+        (activeChange)="onPriorityChange($event)"
+      ></app-task-filter-chips>
+    </div>
+
+    <div class="tasks__dates">
+      <label class="tasks__date">
+        <span>Due from</span>
+        <input type="date" [value]="dueFrom()" (change)="onDueFromChange($event)" />
+      </label>
+      <label class="tasks__date">
+        <span>Due to</span>
+        <input type="date" [value]="dueTo()" (change)="onDueToChange($event)" />
+      </label>
+      <label class="tasks__mine">
+        <input type="checkbox" [checked]="mineOnly()" (change)="onMineChange($event)" />
+        <span>Assigned to me</span>
+      </label>
+    </div>
+  </div>
+
+  <div *ngIf="loading()" class="tasks__state">
+    <app-spinner></app-spinner>
+    <span>Loading tasks…</span>
+  </div>
+
+  <div *ngIf="!loading() && error()" class="tasks__state tasks__state--error">
+    <span>{{ error() }}</span>
+    <app-btn size="sm" variant="outline" (click)="load()">Retry</app-btn>
+  </div>
+
+  <ng-container *ngIf="!loading() && !error()">
+    <app-task-table
+      [tasks]="tasks()"
+      [canManage]="canManage"
+      [canDelete]="canDelete"
+      [sortBy]="sortBy()"
+      [sortOrder]="sortOrder()"
+      (sortChange)="onSort($event)"
+      (edit)="openEdit($event)"
+      (delete)="remove($event)"
+    ></app-task-table>
+
+    <div class="tasks__footer">
+      <app-pagination
+        [pageNumber]="pageNumber()"
+        [pageSize]="pageSize"
+        [totalCount]="totalCount()"
+        [totalPages]="totalPages()"
+        (pageChange)="onPageChange($event)"
+      ></app-pagination>
+    </div>
+  </ng-container>
+
+  <app-task-modal
+    [open]="modalOpen()"
+    [task]="editing()"
+    [projects]="projects()"
+    [saving]="saving()"
+    [errorMessage]="modalError()"
+    (close)="closeModal()"
+    (save)="save($event)"
+  ></app-task-modal>
+</div>

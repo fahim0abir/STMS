@@ -1,0 +1,33 @@
+<div class="dashboard">
+  <div class="dashboard__header">
+    <h1>Dashboard</h1>
+    <p>Overview of projects and tasks</p>
+  </div>
+
+  <div *ngIf="loading()" class="dashboard__state">
+    <app-spinner size="lg"></app-spinner>
+    <span>Loading dashboard…</span>
+  </div>
+
+  <div *ngIf="!loading() && error()" class="dashboard__state dashboard__state--error">
+    <span>{{ error() }}</span>
+    <button class="dashboard__retry" (click)="load()">Retry</button>
+  </div>
+
+  <ng-container *ngIf="!loading() && !error() && stats() as s">
+    <section class="dashboard__kpis">
+      <app-kpi-card label="Projects" [value]="s.totalProjects" tone="primary"></app-kpi-card>
+      <app-kpi-card label="Total Tasks" [value]="s.totalTasks" tone="neutral"></app-kpi-card>
+      <app-kpi-card label="Completed" [value]="s.completedTasks" tone="success"></app-kpi-card>
+      <app-kpi-card label="Pending" [value]="s.pendingTasks" tone="warning"></app-kpi-card>
+      <app-kpi-card label="Upcoming Due" [value]="s.upcomingDueTasks" tone="danger"></app-kpi-card>
+    </section>
+
+    <section class="dashboard__grid">
+      <app-stat-breakdown title="Tasks by Status" [rows]="statusRows()"></app-stat-breakdown>
+      <app-stat-breakdown title="Tasks by Priority" [rows]="priorityRows()"></app-stat-breakdown>
+      <app-completion-ring [completed]="s.completedTasks" [pending]="s.pendingTasks"></app-completion-ring>
+      <app-upcoming-due-list [tasks]="upcoming()"></app-upcoming-due-list>
+    </section>
+  </ng-container>
+</div>
