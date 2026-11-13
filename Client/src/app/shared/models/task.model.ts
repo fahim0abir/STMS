@@ -3,11 +3,16 @@ import { TaskPriority, TaskStatus, toTaskPriority, toTaskStatus } from './enums'
 
 export interface TaskItem {
   id: string;
+  projectId?: string;
   title: string;
   description?: string | null;
   status: TaskStatus;
   priority: TaskPriority;
+  assigneeId?: string | null;
   assigneeEmail?: string | null;
+  dueAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string | null;
 }
 
 export interface TaskItemUpsert {
@@ -16,6 +21,7 @@ export interface TaskItemUpsert {
   status: TaskStatus;
   priority: TaskPriority;
   assigneeId?: string | null;
+  dueAt?: string | null;
 }
 
 export interface TaskItemQuery extends PageQuery {

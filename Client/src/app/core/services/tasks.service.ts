@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { API_BASE_URL } from '../api.config';
 import { ApiResponse } from '../../shared/models/api-response.model';
+import { AiEnhanceRequest, AiEnhanceResponse } from '../../shared/models/ai.model';
 import { PagedResult } from '../../shared/models/paged-result.model';
 import {
   TaskItem,
@@ -58,9 +59,9 @@ export class TasksService {
     return this.http.delete<ApiResponse<object>>(`${this.tasksUrl}/${id}`).pipe(map(() => void 0));
   }
 
-  enhanceDescription(description: string): Observable<string> {
+  enhanceDescription(request: AiEnhanceRequest): Observable<AiEnhanceResponse> {
     return this.http
-      .post<ApiResponse<string>>(this.enhanceUrl, { description })
+      .post<ApiResponse<AiEnhanceResponse>>(this.enhanceUrl, request)
       .pipe(map((res) => res.data));
   }
 

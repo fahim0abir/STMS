@@ -14,17 +14,15 @@ import { CompletionRingComponent } from './components/completion-ring/completion
 const STATUS_LABELS: Record<string, string> = {
   ToDo: 'To Do',
   InProgress: 'In Progress',
-  Review: 'Review',
-  Done: 'Done',
-  Blocked: 'Blocked',
+  Completed: 'Completed',
+  Cancelled: 'Cancelled',
 };
 
 const STATUS_COLORS: Record<string, string> = {
   ToDo: '#6b7280',
   InProgress: '#2563eb',
-  Review: '#7c3aed',
-  Done: '#16a34a',
-  Blocked: '#dc2626',
+  Completed: '#16a34a',
+  Cancelled: '#dc2626',
 };
 
 const PRIORITY_COLORS: Record<string, string> = {

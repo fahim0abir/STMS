@@ -14,7 +14,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Project } from '../../../../shared/models/project.model';
 import { TaskItem, TaskItemUpsert } from '../../../../shared/models/task.model';
 import { TASK_PRIORITY_LABELS, TASK_STATUS_LABELS, TaskPriority, TaskStatus } from '../../../../shared/models/enums';
-import { AiService, AI_MAX_LENGTH } from '../../../../core/services/ai.service';
+import { AiEnhanceResult, AiService, AI_MAX_LENGTH } from '../../../../core/services/ai.service';
 import { ButtonComponent } from '../../../../shared/ui/button.component';
 
 export interface TaskModalSaveEvent {
@@ -48,7 +48,7 @@ export class TaskModalComponent implements OnChanges {
   readonly aiLoading = signal(false);
   readonly aiMessage = signal('');
   readonly aiUsedFallback = signal(false);
-  readonly aiSuggestion = signal<string | null>(null);
+  readonly aiSuggestion = signal<AiEnhanceResult | null>(null);
   readonly canRevert = signal(false);
 
   private descriptionBeforeAccept: string | null = null;
@@ -71,6 +71,7 @@ export class TaskModalComponent implements OnChanges {
     description: ['', [Validators.maxLength(AI_MAX_LENGTH)]],
     status: [TaskStatus.ToDo as TaskStatus, [Validators.required]],
     priority: [TaskPriority.Medium as TaskPriority, [Validators.required]],
+    dueAt: [''],
   });
 
   get isEdit(): boolean {
@@ -86,6 +87,7 @@ export class TaskModalComponent implements OnChanges {
         description: this.task?.description ?? '',
         status: this.task?.status ?? TaskStatus.ToDo,
         priority: this.task?.priority ?? TaskPriority.Medium,
+        dueAt: this.toDateInput(this.task?.dueAt),
       });
     }
   }
@@ -101,27 +103,41 @@ export class TaskModalComponent implements OnChanges {
       return;
     }
 
+    const projectId = this.form.controls.projectId.value;
+    const projectName = this.projects.find((project) => project.id === projectId)?.name ?? null;
+
     this.aiLoading.set(true);
     this.aiMessage.set('');
-    this.aiService.enhance(description).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: (result) => {
-        this.aiLoading.set(false);
-        this.aiUsedFallback.set(result.usedFallback);
-        this.aiMessage.set(result.message ?? '');
-        this.aiSuggestion.set(result.usedFallback ? null : result.text);
-      },
-      error: (err) => {
-        this.aiLoading.set(false);
-        this.aiMessage.set(err?.message || 'AI enhancement failed.');
-      },
-    });
+    this.aiService
+      .enhance({ description, title: this.form.controls.title.value, context: projectName })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (result) => {
+          this.aiLoading.set(false);
+          this.aiUsedFallback.set(result.usedFallback);
+          this.aiMessage.set(result.message ?? '');
+          this.aiSuggestion.set(result);
+        },
+        error: (err) => {
+          this.aiLoading.set(false);
+          this.aiMessage.set(err?.message || 'AI enhancement failed.');
+        },
+      });
   }
 
   acceptSuggestion(): void {
     const suggestion = this.aiSuggestion();
     if (!suggestion) return;
+
     this.descriptionBeforeAccept = this.form.controls.description.value;
-    this.form.controls.description.setValue(suggestion);
+    this.form.controls.description.setValue(suggestion.enhancedDescription);
+
+    if (!this.form.controls.title.value.trim() && suggestion.suggestedTitle) {
+      this.form.controls.title.setValue(suggestion.suggestedTitle);
+    }
+
+    this.form.controls.priority.setValue(Number(suggestion.suggestedPriority) as TaskPriority);
+
     this.aiSuggestion.set(null);
     this.canRevert.set(true);
     this.aiMessage.set('AI suggestion applied.');
@@ -159,12 +175,19 @@ export class TaskModalComponent implements OnChanges {
       description: raw.description?.trim() || null,
       status: Number(raw.status) as TaskStatus,
       priority: Number(raw.priority) as TaskPriority,
+      dueAt: raw.dueAt ? new Date(raw.dueAt).toISOString() : null,
     };
 
     this.save.emit({
       dto,
       projectId: this.isEdit ? undefined : raw.projectId,
     });
+  }
+
+  private toDateInput(value?: string | null): string {
+    if (!value) return '';
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString().slice(0, 10);
   }
 
   private resetState(): void {

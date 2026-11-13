@@ -7,9 +7,8 @@ export enum Role {
 export enum TaskStatus {
   ToDo = 0,
   InProgress = 1,
-  Review = 2,
-  Done = 3,
-  Blocked = 4,
+  Completed = 2,
+  Cancelled = 3,
 }
 
 export enum TaskPriority {
@@ -28,9 +27,8 @@ export const ROLE_LABELS: Record<Role, string> = {
 export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
   [TaskStatus.ToDo]: 'To Do',
   [TaskStatus.InProgress]: 'In Progress',
-  [TaskStatus.Review]: 'Review',
-  [TaskStatus.Done]: 'Done',
-  [TaskStatus.Blocked]: 'Blocked',
+  [TaskStatus.Completed]: 'Completed',
+  [TaskStatus.Cancelled]: 'Cancelled',
 };
 
 export const TASK_PRIORITY_LABELS: Record<TaskPriority, string> = {

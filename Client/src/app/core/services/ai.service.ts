@@ -1,14 +1,13 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, map, of, throwError, timeout } from 'rxjs';
 import { TasksService } from './tasks.service';
+import { AiEnhanceRequest, AiEnhanceResponse } from '../../shared/models/ai.model';
 
-export const AI_MIN_LENGTH = 5;
-export const AI_MAX_LENGTH = 1000;
-const AI_TIMEOUT_MS = 20000;
+export const AI_MIN_LENGTH = 20;
+export const AI_MAX_LENGTH = 4000;
+const AI_TIMEOUT_MS = 30000;
 
-export interface AiEnhanceResult {
-  text: string;
-  usedFallback: boolean;
+export interface AiEnhanceResult extends AiEnhanceResponse {
   message?: string;
 }
 
@@ -23,21 +22,54 @@ export class AiService {
     return null;
   }
 
-  enhance(description: string): Observable<AiEnhanceResult> {
+  enhance(request: AiEnhanceRequest): Observable<AiEnhanceResult> {
+    const description = (request.description ?? '').trim();
     const validationError = this.validate(description);
     if (validationError) return throwError(() => new Error(validationError));
 
-    const original = description.trim();
-    return this.tasksService.enhanceDescription(original).pipe(
-      timeout(AI_TIMEOUT_MS),
-      map((text) => ({ text: text?.trim() || original, usedFallback: false })),
-      catchError(() =>
-        of({
-          text: original,
-          usedFallback: true,
-          message: 'AI enhancement is unavailable right now. Your original description was kept.',
-        }),
-      ),
-    );
+    return this.tasksService
+      .enhanceDescription({
+        description,
+        title: request.title?.trim() || null,
+        context: request.context?.trim() || null,
+      })
+      .pipe(
+        timeout(AI_TIMEOUT_MS),
+        map((res) => this.normalize(res, description)),
+        catchError(() =>
+          of({
+            ...this.fallback(description),
+            message: 'AI enhancement is unavailable right now. A local suggestion was generated instead.',
+          }),
+        ),
+      );
+  }
+
+  private normalize(res: AiEnhanceResponse, original: string): AiEnhanceResult {
+    return {
+      enhancedDescription: (res?.enhancedDescription ?? '').trim() || original,
+      suggestedTitle: (res?.suggestedTitle ?? '').trim(),
+      acceptanceCriteria: res?.acceptanceCriteria ?? [],
+      subtasks: res?.subtasks ?? [],
+      suggestedPriority: res?.suggestedPriority ?? 1,
+      estimatedHours: res?.estimatedHours ?? null,
+      model: res?.model ?? 'unknown',
+      usedFallback: !!res?.usedFallback,
+      message: res?.usedFallback ? 'Local fallback suggestion (AI provider unavailable).' : '',
+    };
+  }
+
+  private fallback(description: string): AiEnhanceResult {
+    const sentence = description.split(/(?<=[.!?])\s+/)[0] ?? description;
+    return {
+      enhancedDescription: `- ${sentence.replace(/\.$/, '')}.`,
+      suggestedTitle: description.split(/\s+/).slice(0, 12).join(' '),
+      acceptanceCriteria: ['Behaviour described in the task is implemented and verified.'],
+      subtasks: ['Break the description into verifiable steps.'],
+      suggestedPriority: 1,
+      estimatedHours: null,
+      model: 'fallback',
+      usedFallback: true,
+    };
   }
 }

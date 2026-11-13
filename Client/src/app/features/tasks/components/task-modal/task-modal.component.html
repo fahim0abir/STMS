@@ -43,9 +43,27 @@
 
       <div class="modal__suggestion" *ngIf="aiSuggestion() as suggestion">
         <div class="modal__suggestion-head">
-          <span>AI suggestion ({{ suggestion.length }}/{{ maxDescriptionLength }})</span>
+          <span>
+            AI suggestion ({{ suggestion.enhancedDescription.length }}/{{ maxDescriptionLength }})
+            <em *ngIf="suggestion.estimatedHours"> · ~{{ suggestion.estimatedHours }}h</em>
+          </span>
         </div>
-        <p class="modal__suggestion-text">{{ suggestion }}</p>
+        <p class="modal__suggestion-title" *ngIf="suggestion.suggestedTitle">
+          <strong>Title:</strong> {{ suggestion.suggestedTitle }}
+        </p>
+        <p class="modal__suggestion-text">{{ suggestion.enhancedDescription }}</p>
+        <div class="modal__suggestion-list" *ngIf="suggestion.acceptanceCriteria.length">
+          <strong>Acceptance criteria</strong>
+          <ul>
+            <li *ngFor="let item of suggestion.acceptanceCriteria">{{ item }}</li>
+          </ul>
+        </div>
+        <div class="modal__suggestion-list" *ngIf="suggestion.subtasks.length">
+          <strong>Suggested subtasks</strong>
+          <ul>
+            <li *ngFor="let item of suggestion.subtasks">{{ item }}</li>
+          </ul>
+        </div>
         <div class="modal__suggestion-actions">
           <app-btn size="sm" variant="primary" (click)="acceptSuggestion()">Accept</app-btn>
           <app-btn size="sm" variant="ghost" (click)="rejectSuggestion()">Reject</app-btn>
@@ -65,6 +83,11 @@
           <select formControlName="priority">
             <option *ngFor="let option of priorityOptions" [value]="option.value">{{ option.label }}</option>
           </select>
+        </label>
+
+        <label class="modal__field">
+          <span>Due date</span>
+          <input type="date" formControlName="dueAt" />
         </label>
       </div>
 

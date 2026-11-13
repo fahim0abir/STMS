@@ -1,6 +1,11 @@
 ﻿import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { TaskItem } from '../../../../shared/models/task.model';
-import { TASK_PRIORITY_LABELS, TASK_STATUS_LABELS } from '../../../../shared/models/enums';
+import {
+  TASK_PRIORITY_LABELS,
+  TASK_STATUS_LABELS,
+  TaskPriority,
+  TaskStatus,
+} from '../../../../shared/models/enums';
 import { BadgeComponent } from '../../../../shared/ui/badge.component';
 import { ButtonComponent } from '../../../../shared/ui/button.component';
 
@@ -88,13 +93,11 @@ export class TaskTableComponent {
 
   statusVariant(task: TaskItem): 'secondary' | 'primary' | 'success' | 'warning' | 'danger' {
     switch (task.status) {
-      case 1:
+      case TaskStatus.InProgress:
         return 'primary';
-      case 2:
-        return 'warning';
-      case 3:
+      case TaskStatus.Completed:
         return 'success';
-      case 4:
+      case TaskStatus.Cancelled:
         return 'danger';
       default:
         return 'secondary';
@@ -103,11 +106,11 @@ export class TaskTableComponent {
 
   priorityVariant(task: TaskItem): 'secondary' | 'success' | 'warning' | 'danger' {
     switch (task.priority) {
-      case 3:
+      case TaskPriority.Critical:
         return 'danger';
-      case 2:
+      case TaskPriority.High:
         return 'warning';
-      case 0:
+      case TaskPriority.Low:
         return 'success';
       default:
         return 'secondary';
