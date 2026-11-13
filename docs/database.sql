@@ -126,6 +126,31 @@ BEGIN
     VALUES (N'20261113032907_InitialCreate', N'9.0.8');
 END;
 
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261113135110_AlignTaskStatusVocabulary'
+)
+BEGIN
+    UPDATE [TaskItems] SET [Status] = 2 WHERE [Status] = 3;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261113135110_AlignTaskStatusVocabulary'
+)
+BEGIN
+    UPDATE [TaskItems] SET [Status] = 3 WHERE [Status] = 4;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261113135110_AlignTaskStatusVocabulary'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261113135110_AlignTaskStatusVocabulary', N'9.0.8');
+END;
+
 COMMIT;
 GO
 

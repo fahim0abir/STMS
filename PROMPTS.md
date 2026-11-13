@@ -1,110 +1,125 @@
-# PROMPTS.md — AI Task Description Enhancement
+# PROMPTS.md - AI Task Description Enhancement
 
-Covers the design, validation, failure handling and safety of the AI feature exposed at
-`POST /api/tasks/enhance-description` (`Server/SmartTask.API/Controllers/TasksController.cs`),
-implemented in `Server/SmartTask.Infrastructure/Services/TaskDescriptionEnhancementService.cs`.
+## 1. Purpose
 
-## 1. Provider & Model
+`POST /api/tasks/enhance-description` converts a rough, informal task note into a **structured, actionable task
+definition** that a team can execute without follow-up questions. The model is `gpt-4o-mini` via GitHub Models
+(free tier); the endpoint degrades gracefully to a deterministic local fallback.
 
-| Setting | Value |
-| --- | --- |
-| Provider | GitHub Models (Azure inference endpoint) |
-| Endpoint | `https://models.inference.ai.azure.com/chat/completions` |
-| Model | `gpt-4o-mini` |
-| Temperature | `0.7` |
-| Max output tokens | `500` |
-| HTTP timeout | 15 seconds |
-| Credential | `AI:GitHubModels:ApiKey` via `dotnet user-secrets` (never committed) |
+## 2. Prompt Design
 
-## 2. System Prompt Structure
+### System prompt (verbatim)
 
-The prompt is a constant in the service and is sent as the `system` message; the user's text is sent verbatim as the `user` message. Verbatim prompt:
+```
+You are a senior delivery lead who turns rough engineering notes into precise, actionable work items.
+Return a single JSON object and nothing else. No markdown fences, no commentary.
 
-```text
-You are a professional task-description editor. Improve the given task description for
-grammar, clarity, and a professional tone. Return ONLY the enhanced description as
-actionable bullet points. Do not add preamble, explanations, or extra sections.
+Schema:
+{
+  "enhancedDescription": "string",
+  "suggestedTitle": "string",
+  "acceptanceCriteria": ["string"],
+  "subtasks": ["string"],
+  "suggestedPriority": "Low" | "Medium" | "High" | "Critical",
+  "estimatedHours": number | null
+}
+
+Rules:
+- Fix grammar and spelling; keep the author's intent and technical vocabulary.
+- enhancedDescription: professional tone, at most 1200 characters, structured as short sentences or hyphen bullets.
+- suggestedTitle: imperative mood, at most 90 characters, no trailing period.
+- acceptanceCriteria: 3 to 6 verifiable statements (testable, observable outcomes).
+- subtasks: 2 to 6 concrete implementation steps, each starting with a verb.
+- suggestedPriority: infer from impact, urgency words and scope; default to Medium when unclear.
+- estimatedHours: realistic effort in hours (0.5 to 200) or null when the scope is unclear.
+- Never invent external systems, credentials, or requirements that are not implied by the input.
 ```
 
-Design intent:
+### User prompt (template)
 
-1. **Role** — "professional task-description editor" narrows the model to editing, not planning.
-2. **Objectives** — grammar, clarity, professional tone (the three graded criteria).
-3. **Format contract** — "ONLY ... actionable bullet points", explicitly forbidding preamble/sections, which keeps the response directly insertable into the task form.
-4. **Deterministic-ish output** — low temperature plus a strict format means the UI never needs to parse structure.
+```
+Rewrite the following task note into the required JSON schema.
 
-## 3. Request / Response Contract
+Working title: {title}                  # optional
+Project / domain context: {context}      # optional
 
-Request body (`EnhanceDescriptionRequestDto`):
-
-```json
-{ "description": "fix login bug asap users cannot sign in" }
+Task note:
+{description}
 ```
 
-Success (HTTP 200):
+### Request parameters
+
+| Parameter | Value | Rationale |
+| --- | --- | --- |
+| `temperature` | `0.4` | Stable, near-deterministic rewrites |
+| `max_tokens` | `900` | Fits description + criteria + subtasks |
+| `response_format` | `{ "type": "json_object" }` | Enforces parseable JSON (dropped automatically on the retry if the provider rejects it) |
+
+## 3. Why structured output
+
+The assignment asks for grammar, clarity, professionalism, expansion and actionable wording. Returning only a string
+satisfies the wording but not the "actionable" intent, so the contract adds suggested title, acceptance criteria,
+subtasks, priority and effort estimate. The Angular task modal consumes each field: it previews the suggestion,
+applies the description, fills an empty title and sets the priority.
+
+## 4. Example - input
 
 ```json
 {
-  "success": true,
-  "message": "Description enhanced.",
-  "data": "- Resolve the login bug that prevents users from signing in.\n- Prioritise the fix as a high-urgency task.",
-  "errors": null,
-  "statusCode": 200
+  "title": "login issue",
+  "context": "SmartTask auth module",
+  "description": "users say login breaks if their password has spaces or special chars. also the error message is confusing and stays for 10 mins. need fix asap"
 }
 ```
 
-## 4. Input / Output Examples
+## 5. Example - output
 
-**Example A — terse, unpunctuated input**
-
-```text
-input:  "write unit tests for auth service asap"
-output:
-- Write unit tests for the authentication service.
-- Prioritise the task as urgent.
+```json
+{
+  "enhancedDescription": "- Fix login failures for passwords containing spaces or special characters.\n- Replace the generic error message with a specific, actionable reason.\n- Clear the stale error state instead of persisting it for ten minutes.",
+  "suggestedTitle": "Fix login failures for passwords with spaces or special characters",
+  "acceptanceCriteria": [
+    "Users with spaces or special characters in their password can authenticate successfully.",
+    "Invalid credentials return a specific error message within one request.",
+    "The error message is cleared after a successful login attempt."
+  ],
+  "subtasks": [
+    "Reproduce the failure with a password containing a space.",
+    "Harden credential parsing and trimming on the server.",
+    "Update the login error mapping and clear the client-side error state."
+  ],
+  "suggestedPriority": "Critical",
+  "estimatedHours": 4
+}
 ```
 
-**Example B — already structured input**
+## 6. Validation & Safety
 
-```text
-input:  "need to update the readme with setup steps and credentials"
-output:
-- Update the README with complete setup instructions.
-- Document the seeded test credentials for all roles.
-```
+**Input validation (FluentValidation, server-side; mirrored in Angular):**
 
-**Example C — fallback (no API key, timeout, non-2xx or unparsable body)**
+- `description`: required, 20-4,000 characters (raised from the original 5-1,000 so multi-sentence notes are accepted).
+- `title`: optional, max 200 characters.
+- `context`: optional, max 500 characters.
+- Rate limit: `enhance` fixed window, 10 requests/minute per client.
+- Endpoint requires authentication (`[Authorize]`).
 
-```text
-input:  "fix login bug asap"
-output: "- fix login bug asap."
-```
+**Output hardening:**
 
-The fallback is deterministic: trim, append a period when missing, prefix with `- `, so the endpoint always returns a bullet-shaped string.
+- JSON is extracted with brace scanning; markdown fences and `**` markers are stripped.
+- Every field is length-clamped (description 1,200, titles 90, list items 240) and lists are capped at 8 entries.
+- `suggestedPriority` is parsed into the enum and defaults to `Medium`; `estimatedHours` is clamped to 0.5-200.
+- Unparseable or empty model output is discarded - never rendered.
 
-## 5. Validation
+**Resilience:**
 
-| Layer | Rule | Behaviour |
-| --- | --- | --- |
-| FluentValidation (`EnhanceDescriptionRequestDtoValidator`) | `NotEmpty`, `MinimumLength(5)`, `MaximumLength(1000)` | HTTP 400 with the joined error messages inside the `ApiResponse<T>` envelope |
-| Service guard | Rejects whitespace and length outside 5–1000 | Returns the original text unchanged (no provider call) |
-| Controller | Re-validates before delegating | Prevents bypass when the service is reused elsewhere |
-| Client | Mirrors the 5–1000 limit before calling the API | Avoids pointless round-trips |
+- 20s HTTP timeout, two attempts (second attempt without `response_format`), then the deterministic fallback.
+- Fallback output is derived only from the user's own text (sentence split, title = first 12 words, keyword-based priority),
+  so it never fabricates external systems.
+- Timeouts caused by client disconnects surface as HTTP 504; rate-limit breaches as 429.
 
-Length capping protects both cost and prompt-injection surface: long free-form payloads cannot be used to smuggle new instructions past the system prompt.
+**Secrets & data handling:**
 
-## 6. Safety & Abuse Controls
-
-- **Authentication required** — the controller is `[Authorize]`; anonymous callers get 401 before any AI cost is incurred.
-- **Rate limiting** — `[EnableRateLimiting("enhance")]` on a fixed window of 10 requests/minute per client (`Program.cs`); excess requests receive HTTP 429.
-- **Timeout** — 15-second `HttpClient` timeout, so a stalled provider cannot hold a request thread indefinitely; on expiry the fallback fires.
-- **Secret handling** — the API key is read from configuration backed by user-secrets, is never logged, and is never returned to the client.
-- **No prompt leakage** — the system prompt is server-side only; API responses contain the enhanced text and nothing else.
-- **Prompt-injection resistance** — the system message forbids extra sections and the user content cannot alter the tool's role; worst case the model returns prose inside a bullet, still plain text.
-- **Output is treated as text** — the Angular form binds it through interpolation (auto-escaped), so markup in a model response cannot execute.
-- **No silent data retention** — the description is not persisted by the enhancement service; it is only forwarded to the provider and returned.
-- **Graceful degradation** — missing key, non-success status or malformed JSON all resolve to the local fallback, so the task form never breaks.
-
-## 7. Client Integration
-
-`Client/src/app/core/services/ai.service.ts` posts to `/tasks/enhance-description` through the authenticated interceptor; the task modal shows a loading state, replaces the textarea with the returned bullet list, and leaves the field editable if the call fails (the API still returns a usable fallback string on most failures).
+- API key is read from user-secrets (`AI:GitHubModels:ApiKey`), never from source control.
+- Only the task description, title and project context are sent - no user identifiers, tokens or PII.
+- Prompt-injection mitigation: the system prompt pins the output schema and forbids extra prose; anything outside the
+  schema is dropped during parsing, and the model output is never executed or interpolated into SQL.
