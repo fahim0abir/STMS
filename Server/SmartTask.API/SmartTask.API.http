@@ -1,6 +1,113 @@
-@SmartTask.API_HostAddress = http://localhost:5195
+@host = http://localhost:5195
+@api = {{host}}/api
+@accessToken = PASTE_ACCESS_TOKEN_FROM_LOGIN
+@refreshToken = PASTE_REFRESH_TOKEN_FROM_LOGIN
+@projectId = 00000000-0000-0000-0000-000000000000
+@taskItemId = 00000000-0000-0000-0000-000000000000
 
-GET {{SmartTask.API_HostAddress}}/weatherforecast/
-Accept: application/json
+### Health check (no auth)
+GET {{host}}/health
 
-###
+### Login as Admin - copy data.accessToken / data.refreshToken into the variables above
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@smarttask.dev",
+  "password": "Admin123!"
+}
+
+### Register a new user
+POST {{api}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "tester@smarttask.dev",
+  "password": "Tester123!",
+  "name": "New Tester"
+}
+
+### Refresh token (body is a raw JSON string)
+POST {{api}}/auth/refresh-token
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+"{{refreshToken}}"
+
+### Logout (body is a raw JSON string)
+POST {{api}}/auth/logout
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+"{{refreshToken}}"
+
+### Dashboard stats
+GET {{api}}/dashboard/stats
+Authorization: Bearer {{accessToken}}
+
+### Projects - paged list
+GET {{api}}/projects/paged?pageNumber=1&pageSize=10
+Authorization: Bearer {{accessToken}}
+
+### Projects - create (Admin or ProjectManager)
+POST {{api}}/projects
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "name": "Smoke Test Project",
+  "description": "Created from SmartTask.API.http"
+}
+
+### Projects - by id
+GET {{api}}/projects/{{projectId}}
+Authorization: Bearer {{accessToken}}
+
+### Projects - update (Admin or ProjectManager)
+PUT {{api}}/projects/{{projectId}}
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "name": "Smoke Test Project (renamed)",
+  "description": "Updated from SmartTask.API.http"
+}
+
+### Task items - paged list
+GET {{api}}/taskitems/paged?pageNumber=1&pageSize=10
+Authorization: Bearer {{accessToken}}
+
+### Task items - create in a project (status/priority are numeric enums)
+POST {{api}}/taskitems?projectId={{projectId}}
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "title": "Smoke test task",
+  "description": "Created from SmartTask.API.http",
+  "status": 0,
+  "priority": 1,
+  "assigneeId": null,
+  "dueAt": null
+}
+
+### Task items - change status (0 ToDo, 1 InProgress, 2 Completed, 3 Cancelled)
+PATCH {{api}}/taskitems/{{taskItemId}}/status
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "status": 1
+}
+
+### AI - enhance description
+POST {{api}}/tasks/enhance-description
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "description": "login page keeps failing when password has spaces",
+  "title": "Fix login",
+  "context": "SmartTask auth module"
+}
+

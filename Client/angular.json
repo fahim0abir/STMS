@@ -50,11 +50,14 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "web.config",
+                "input": "src",
+                "output": ""
               }
             ],
-            "styles": [
-              "src/styles.scss"
-            ]
+            "styles": ["src/styles.scss"]
           },
           "configurations": {
             "production": {
@@ -100,7 +103,6 @@
             "runner": "vitest"
           }
         }
-
       }
     }
   }

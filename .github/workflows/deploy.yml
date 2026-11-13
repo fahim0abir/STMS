@@ -1,0 +1,40 @@
+name: Build .NET and Angular
+
+on:
+  push:
+    branches: [main, master]
+
+jobs:
+  build-and-pack:
+    runs-on: self-hosted # Targets your local self-hosted runner
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # --- 1. BUILD ANGULAR FRONTEND ---
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+
+      - name: Install Angular Dependencies & Build
+        working-directory: C:/inetpub/STMS.Client
+        run: |
+          npm ci
+          npm run build -- --configuration production
+
+      # --- 2. BUILD .NET BACKEND ---
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x" 
+
+      - name: Restore .NET Dependencies
+        run: dotnet restore ./Server/SmartTask.API/SmartTask.API.csproj
+
+      - name: Build .NET Project
+        run: dotnet build ./Server/SmartTask.API/SmartTask.API.csproj --configuration Release --no-restore
+
+      - name: Publish .NET Project
+        run: dotnet publish ./Server/SmartTask.API/SmartTask.API.csproj --configuration Release --output C:/inetpub/STMS.Server --no-build
