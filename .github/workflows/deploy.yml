@@ -37,6 +37,7 @@ jobs:
           ConnectionStrings_DefaultConnection: ${{ secrets.ConnectionStrings_DefaultConnection }}
           JWT_KEY_SECRET: ${{ secrets.JWT_KEY }}
           AI_GITHUB_MODELS_API_KEY: ${{ secrets.AI_GITHUB_MODELS_API_KEY }}
+          AI__GOOGLEAISTUDIO__APIKEY: ${{ secrets.AI__GOOGLEAISTUDIO__APIKEY }}
         run: |
           $filePath = "./Server/SmartTask.API/appsettings.prod.json"
 
@@ -73,13 +74,13 @@ jobs:
               $json | Add-Member -NotePropertyName 'AI' -NotePropertyValue ([PSCustomObject]@{});
           }
 
-          # Ensure the 'GitHubModels' section exists
-          if (-not $json.AI.PSObject.Properties['GitHubModels']) {
-              $json.AI | Add-Member -NotePropertyName 'GitHubModels' -NotePropertyValue ([PSCustomObject]@{});
+          # Ensure the 'GoogleAIStudio' section exists
+          if (-not $json.AI.PSObject.Properties['GoogleAIStudio']) {
+              $json.AI | Add-Member -NotePropertyName 'GoogleAIStudio' -NotePropertyValue ([PSCustomObject]@{});
           }
 
           # Inject or update the ApiKey property securely from the GitHub secret
-          $json.AI.GitHubModels | Add-Member -NotePropertyName 'ApiKey' -NotePropertyValue $env:AI_GITHUB_MODELS_API_KEY -Force
+          $json.AI.GoogleAIStudio | Add-Member -NotePropertyName 'ApiKey' -NotePropertyValue $env:AI_GITHUB_MODELS_API_KEY -Force
 
           # Save back to appsettings.json
           $json | ConvertTo-Json -Depth 10 | Set-Content $filePath
