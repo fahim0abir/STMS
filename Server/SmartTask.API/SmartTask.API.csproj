@@ -25,4 +25,10 @@
     <ProjectReference Include="..\SmartTask.Application\SmartTask.Application.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="web.config">
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>
