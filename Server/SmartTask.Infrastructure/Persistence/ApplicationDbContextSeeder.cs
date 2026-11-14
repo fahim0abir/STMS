@@ -7,42 +7,41 @@ namespace SmartTask.Infrastructure.Persistence;
 
 public class ApplicationDbContextSeeder
 {
+    private static readonly (Guid Id, string Email, string Password, string Name, Role Role)[] SeedUsers =
+    [
+        (Guid.Parse("00000000-0000-0000-0000-000000000001"), "admin@smarttask.dev", "Admin123!", "System Administrator", Role.Admin),
+        (Guid.Parse("00000000-0000-0000-0000-000000000002"), "projectmanager@smarttask.dev", "Pm123456!", "Project Manager", Role.ProjectManager),
+        (Guid.Parse("00000000-0000-0000-0000-000000000003"), "teammember@smarttask.dev", "Tm123456!", "Team Member", Role.TeamMember)
+    ];
+
     public static async Task SeedAsync(ApplicationDbContext context)
     {
-        if (await context.Users.AnyAsync())
+        var seedIds = SeedUsers.Select(u => u.Id).ToArray();
+        var existingIds = await context.Users
+            .Where(u => seedIds.Contains(u.Id))
+            .Select(u => u.Id)
+            .ToListAsync();
+
+        var missingUsers = SeedUsers.Where(u => !existingIds.Contains(u.Id)).ToList();
+
+        if (missingUsers.Count == 0)
         {
             return;
         }
 
-        var admin = new User
+        foreach (var seed in missingUsers)
         {
-            Id = Guid.Parse("00000000-0000-0000-0000-000000000001"),
-            Email = "admin@smarttask.dev",
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123!"),
-            Name = "System Administrator",
-            Role = Role.Admin,
-            CreatedAt = DateTime.UtcNow
-        };
-        var projectManager = new User
-        {
-            Id = Guid.Parse("00000000-0000-0000-0000-000000000002"),
-            Email = "projectmanager@smarttask.dev",
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Pm123456!"),
-            Name = "Project Manager",
-            Role = Role.ProjectManager,
-            CreatedAt = DateTime.UtcNow
-        };
-        var teamMember = new User
-        {
-            Id = Guid.Parse("00000000-0000-0000-0000-000000000003"),
-            Email = "teammember@smarttask.dev",
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Tm123456!"),
-            Name = "Team Member",
-            Role = Role.TeamMember,
-            CreatedAt = DateTime.UtcNow
-        };
+            context.Users.Add(new User
+            {
+                Id = seed.Id,
+                Email = seed.Email,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(seed.Password),
+                Name = seed.Name,
+                Role = seed.Role,
+                CreatedAt = DateTime.UtcNow
+            });
+        }
 
-        context.Users.AddRange(admin, projectManager, teamMember);
         await context.SaveChangesAsync();
     }
 }

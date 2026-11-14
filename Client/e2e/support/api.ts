@@ -1,6 +1,6 @@
 import { APIRequestContext, Page, expect } from '@playwright/test';
 
-export const API_BASE_URL = 'http://localhost:5195/api';
+export const API_BASE_URL = (process.env['API_BASE_URL'] ?? 'http://localhost:5195/api').replace(/\/+$/, '');
 
 export const users = {
   admin: { email: 'admin@smarttask.dev', password: 'Admin123!' },

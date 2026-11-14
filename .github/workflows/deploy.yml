@@ -12,7 +12,6 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # --- 1. BUILD ANGULAR FRONTEND ---
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -24,7 +23,6 @@ jobs:
           npm ci
           npm run build -- --configuration production
 
-      # --- 2. BUILD .NET BACKEND ---
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
         with:
@@ -33,14 +31,34 @@ jobs:
       - name: Restore .NET Dependencies
         run: dotnet restore ./Server/SmartTask.API/SmartTask.API.csproj
 
+      - name: Inject JWT Secret into appsettings.json
+        shell: powershell
+        env:
+          JWT_KEY_SECRET: ${{ secrets.JWT_KEY }}
+        run: |
+          $filePath = "./Server/SmartTask.API/appsettings.json"
+
+          # Read existing appsettings.json
+          $json = Get-Content $filePath -Raw | ConvertFrom-Json
+
+          # Ensure the 'Jwt' section exists
+          if (-not $json.PSObject.Properties['Jwt']) {
+              $json | Add-Member -NotePropertyName 'Jwt' -NotePropertyValue ([PSCustomObject]@{});
+          }
+
+          # Inject or update the Key property securely from the GitHub secret
+          $json.Jwt | Add-Member -NotePropertyName 'Key' -NotePropertyValue $env:JWT_KEY_SECRET -Force
+
+          # Save back to appsettings.json
+          $json | ConvertTo-Json -Depth 10 | Set-Content $filePath
+
       - name: Build .NET Project
         run: dotnet build ./Server/SmartTask.API/SmartTask.API.csproj --configuration Release --no-restore
 
       - name: Publish .NET Project
         run: dotnet publish ./Server/SmartTask.API/SmartTask.API.csproj --configuration Release --output C:/inetpub/STMS.Server --no-build
 
-      # --- 3. MERGE ASSETS ---
-      - name: Copy Angular Build to iis
+      - name: Copy Angular Build into iis
         shell: powershell
         run: |
           Remove-Item -Recurse -Force C:/inetpub/STMS.Client/*

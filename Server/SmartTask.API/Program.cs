@@ -17,6 +17,7 @@ using FluentValidation;
 using SmartTask.Application.DTOs;
 using SmartTask.Domain.Enums;
 using Serilog;
+using SmartTask.Domain.Entities;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -66,17 +67,17 @@ else
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<ApplicationDbContext>("database");
 
-builder.Services.AddScoped<IRepository<SmartTask.Domain.Entities.User>, Repository<SmartTask.Domain.Entities.User>>();
-builder.Services.AddScoped<IRepository<SmartTask.Domain.Entities.Project>, Repository<SmartTask.Domain.Entities.Project>>();
-builder.Services.AddScoped<IRepository<SmartTask.Domain.Entities.TaskItem>, Repository<SmartTask.Domain.Entities.TaskItem>>();
+builder.Services.AddScoped<IRepository<User>, Repository<User>>();
+builder.Services.AddScoped<IRepository<Project>, Repository<Project>>();
+builder.Services.AddScoped<IRepository<TaskItem>, Repository<TaskItem>>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IProjectService, SmartTask.Infrastructure.Services.ProjectService>();
-builder.Services.AddScoped<ITaskItemService, SmartTask.Infrastructure.Services.TaskItemService>();
-builder.Services.AddScoped<IDashboardService, SmartTask.Infrastructure.Services.DashboardService>();
-builder.Services.AddScoped<ITaskDescriptionEnhancementService, SmartTask.Infrastructure.Services.TaskDescriptionEnhancementService>();
+builder.Services.AddScoped<IProjectService, ProjectService>();
+builder.Services.AddScoped<ITaskItemService, TaskItemService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
+builder.Services.AddScoped<ITaskDescriptionEnhancementService, TaskDescriptionEnhancementService>();
 builder.Services.AddScoped<IValidator<ProjectQueryDto>, ProjectQueryDtoValidator>();
 builder.Services.AddScoped<IValidator<TaskItemQueryDto>, TaskItemQueryDtoValidator>();
 builder.Services.AddScoped<IValidator<EnhanceDescriptionRequestDto>, EnhanceDescriptionRequestDtoValidator>();
@@ -151,10 +152,47 @@ app.UseRateLimiter();
 app.MapControllers();
 app.MapHealthChecks("/health");
 
+static async Task ApplyMigrationsAsync(ApplicationDbContext context)
+{
+    const int maxAttempts = 5;
+    var retryDelay = TimeSpan.FromSeconds(5);
+
+    for (var attempt = 1; ; attempt++)
+    {
+        try
+        {
+            Log.Information("Applying database migrations (attempt {Attempt}/{MaxAttempts})...", attempt, maxAttempts);
+            await context.Database.MigrateAsync();
+            Log.Information("Database migrations applied successfully.");
+            return;
+        }
+        catch (Exception ex) when (attempt < maxAttempts)
+        {
+            Log.Warning(ex, "Database migration attempt {Attempt}/{MaxAttempts} failed. Retrying in {DelaySeconds}s...", attempt, maxAttempts, retryDelay.TotalSeconds);
+            await Task.Delay(retryDelay);
+        }
+        catch (Exception ex)
+        {
+            Log.Fatal(ex, "Database migration failed after {MaxAttempts} attempts. Aborting startup.", maxAttempts);
+            throw;
+        }
+    }
+}
+
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    await ApplicationDbContextSeeder.SeedAsync(context);
+
+    if (context.Database.IsRelational() && app.Configuration.GetValue("Database:RunMigrationsOnStartup", true))
+    {
+        await ApplyMigrationsAsync(context);
+    }
+
+    if (app.Configuration.GetValue("Database:RunSeedOnStartup", true))
+    {
+        await ApplicationDbContextSeeder.SeedAsync(context);
+        Log.Information("Database seeding completed.");
+    }
 }
 
 app.Run();

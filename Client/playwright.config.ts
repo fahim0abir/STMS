@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const API_URL = 'http://localhost:5195';
-const APP_URL = 'http://localhost:4200';
+const API_URL = (process.env['API_URL'] ?? process.env['API_BASE_URL']?.replace(/\/api\/?$/, '')) ?? 'http://localhost:5195';
+const APP_URL = process.env['APP_URL'] ?? 'http://localhost:4200';
 
 export default defineConfig({
   testDir: './e2e',
@@ -10,7 +10,7 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   retries: 0,
-  forbidOnly: !!process.env.CI,
+  forbidOnly: !!process.env['CI'],
   reporter: [['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }]],
   use: {
     baseURL: APP_URL,
@@ -31,7 +31,7 @@ export default defineConfig({
       url: `${API_URL}/health`,
       cwd: __dirname,
       timeout: 240_000,
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: !process.env['CI'],
       stdout: 'ignore',
       stderr: 'pipe',
       env: {
@@ -44,7 +44,7 @@ export default defineConfig({
       command: 'npm start -- --port 4200',
       url: APP_URL,
       timeout: 240_000,
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: !process.env['CI'],
       stdout: 'ignore',
       stderr: 'pipe',
     },

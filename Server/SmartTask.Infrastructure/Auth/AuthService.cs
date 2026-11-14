@@ -34,7 +34,8 @@ public class AuthService : IAuthService
 
     public async Task<UserDto> RegisterAsync(RegisterDto registerDto)
     {
-        if (await _userRepository.FindSingleAsync(u => u.Email.Equals(registerDto.Email, StringComparison.OrdinalIgnoreCase)) != null)
+        var normalizedEmail = registerDto.Email.Trim().ToLowerInvariant();
+        if (await _userRepository.FindSingleAsync(u => u.Email == normalizedEmail) != null)
         {
             throw new InvalidOperationException("A user with this email already exists.");
         }
@@ -42,7 +43,7 @@ public class AuthService : IAuthService
         var user = new User
         {
             Id = Guid.NewGuid(),
-            Email = registerDto.Email.ToLowerInvariant(),
+            Email = normalizedEmail,
             PasswordHash = _passwordHasher.Hash(registerDto.Password),
             Name = registerDto.Name,
             Role = Role.TeamMember,
@@ -57,7 +58,8 @@ public class AuthService : IAuthService
 
     public async Task<(UserDto User, string AccessToken, DateTime AccessTokenExpiresAt, string RefreshToken)> LoginAsync(LoginDto loginDto)
     {
-        var user = await _userRepository.FindSingleAsync(u => u.Email.Equals(loginDto.Email, StringComparison.OrdinalIgnoreCase));
+        var normalizedEmail = loginDto.Email.Trim().ToLowerInvariant();
+        var user = await _userRepository.FindSingleAsync(u => u.Email == normalizedEmail);
         if (user == null || !_passwordHasher.Verify(loginDto.Password, user.PasswordHash))
         {
             throw new SecurityException("Invalid email or password.");

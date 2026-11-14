@@ -68,8 +68,9 @@ middleware pipeline, options-based configuration, strategy-style fallback for ex
 ```
 STMS/
   Client/                            # Angular standalone application
+    src/environments/                # environment.ts (production) + environment.development.ts -> apiBaseUrl
     src/app/
-      core/                          # api.config, auth services, guards, interceptors, HTTP services
+      core/                          # api.config (API_BASE_URL from environment), auth, guards, interceptors, HTTP services
       features/                      # auth, dashboard, projects, tasks (containers + presentational)
       shared/                        # layout, models, ui components, validators
   Server/
@@ -101,8 +102,13 @@ npm install
 npm start                                   # http://localhost:4200
 ```
 
-The API seeds roles and three demo users on first start, then serves Swagger UI in Development at
-`http://localhost:5195/swagger`.
+The Angular client reads its API origin from `Client/src/environments`:
+`environment.development.ts` is used by `npm start`, `npm test` and `--configuration development`,
+while `environment.ts` is used by production builds (`npm run build`). Point `apiBaseUrl` at the deployed
+API origin before shipping; `api.config.ts` derives `API_BASE_URL` from it.
+
+The API applies pending EF Core migrations and seeds missing demo users automatically at startup
+(every deployment included), then serves Swagger UI in Development at `http://localhost:5195/swagger`.
 
 ## Configuration & Secrets
 
@@ -133,7 +139,11 @@ Optional AI overrides (defaults shown):
 - Migrations live in `Server/SmartTask.Infrastructure/Migrations`:
   - `InitialCreate` - schema for `Users`, `Projects`, `TaskItems`, `RefreshTokens`.
   - `AlignTaskStatusVocabulary` - data migration remapping legacy statuses to the assignment vocabulary.
-- Apply: `dotnet ef database update --project SmartTask.Infrastructure --startup-project SmartTask.API`.
+- Apply: automatic at startup (`Database:RunMigrationsOnStartup`, default `true`) with a bounded retry;
+  manual alternative:
+  `dotnet ef database update --project SmartTask.Infrastructure --startup-project SmartTask.API`.
+- Seeding is idempotent: `ApplicationDbContextSeeder` inserts only the three demo users whose fixed ids are
+  missing and never overwrites existing rows (`Database:RunSeedOnStartup`, default `true`).
 - Portable script: `docs/database.sql` is regenerated with
   `dotnet ef migrations script --idempotent -o ../docs/database.sql` and is safe to re-run.
 
