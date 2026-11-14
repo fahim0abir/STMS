@@ -31,15 +31,26 @@ jobs:
       - name: Restore .NET Dependencies
         run: dotnet restore ./Server/SmartTask.API/SmartTask.API.csproj
 
-      - name: Inject JWT Secret into appsettings.json
+      - name: Inject JWT Secret into appsettings.prod.json
         shell: powershell
         env:
           JWT_KEY_SECRET: ${{ secrets.JWT_KEY }}
+          AI_GITHUB_MODELS_API_KEY: ${{ secrets.AI_GITHUB_MODELS_API_KEY }}
         run: |
-          $filePath = "./Server/SmartTask.API/appsettings.json"
+          $filePath = "./Server/SmartTask.API/appsettings.prod.json"
 
-          # Read existing appsettings.json
-          $json = Get-Content $filePath -Raw | ConvertFrom-Json
+          # Ensure the target directory exists
+          $dir = Split-Path -Parent $filePath
+          if (-not (Test-Path $dir)) {
+              New-Item -ItemType Directory -Path $dir -Force | Out-Null
+          }
+
+          # Load existing appsettings.json or create a new empty object if it doesn't exist
+          if (Test-Path $filePath) {
+              $json = Get-Content $filePath -Raw | ConvertFrom-Json
+          } else {
+              $json = [PSCustomObject]@{}
+          }
 
           # Ensure the 'Jwt' section exists
           if (-not $json.PSObject.Properties['Jwt']) {
@@ -48,6 +59,19 @@ jobs:
 
           # Inject or update the Key property securely from the GitHub secret
           $json.Jwt | Add-Member -NotePropertyName 'Key' -NotePropertyValue $env:JWT_KEY_SECRET -Force
+
+          # Ensure the 'AI' section exists
+          if (-not $json.PSObject.Properties['AI']) {
+              $json | Add-Member -NotePropertyName 'AI' -NotePropertyValue ([PSCustomObject]@{});
+          }
+
+          # Ensure the 'GitHubModels' section exists
+          if (-not $json.AI.PSObject.Properties['GitHubModels']) {
+              $json.AI | Add-Member -NotePropertyName 'GitHubModels' -NotePropertyValue ([PSCustomObject]@{});
+          }
+
+          # Inject or update the ApiKey property securely from the GitHub secret
+          $json.AI.GitHubModels | Add-Member -NotePropertyName 'ApiKey' -NotePropertyValue $env:AI_GITHUB_MODELS_API_KEY -Force
 
           # Save back to appsettings.json
           $json | ConvertTo-Json -Depth 10 | Set-Content $filePath
