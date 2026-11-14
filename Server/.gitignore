@@ -19,7 +19,7 @@ packages/
 logs/
 
 # Sensitive configuration (secrets)
-appsettings.json
+!appsettings.json
 appsettings.*.json
 
 # Committed configuration template (placeholders only)
