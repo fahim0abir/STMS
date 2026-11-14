@@ -15,10 +15,14 @@ public static class TestData
     public const string ManagerPassword = "Pm123456!";
     public const string MemberEmail = "teammember@smarttask.dev";
     public const string MemberPassword = "Tm123456!";
+    public const string SecondManagerEmail = "projectmanager2@smarttask.dev";
+    public const string SecondMemberEmail = "teammember2@smarttask.dev";
 
     public static readonly Guid AdminId = Guid.Parse("00000000-0000-0000-0000-000000000001");
     public static readonly Guid ManagerId = Guid.Parse("00000000-0000-0000-0000-000000000002");
     public static readonly Guid MemberId = Guid.Parse("00000000-0000-0000-0000-000000000003");
+    public static readonly Guid SecondManagerId = Guid.Parse("00000000-0000-0000-0000-000000000004");
+    public static readonly Guid SecondMemberId = Guid.Parse("00000000-0000-0000-0000-000000000005");
 
     public static readonly Guid AdminProjectId = Guid.Parse("11111111-1111-1111-1111-111111111111");
     public static readonly Guid ManagerProjectId = Guid.Parse("22222222-2222-2222-2222-222222222222");
@@ -36,6 +40,30 @@ public static class TestDataSeeder
         using var scope = services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
+        if (!await context.Users.AnyAsync(u => u.Id == TestData.SecondManagerId))
+        {
+            context.Users.AddRange(
+                new User
+                {
+                    Id = TestData.SecondManagerId,
+                    Email = TestData.SecondManagerEmail,
+                    PasswordHash = "e2e-seed-hash",
+                    Name = "Second Manager",
+                    Role = Role.ProjectManager,
+                    CreatedAt = DateTime.UtcNow
+                },
+                new User
+                {
+                    Id = TestData.SecondMemberId,
+                    Email = TestData.SecondMemberEmail,
+                    PasswordHash = "e2e-seed-hash",
+                    Name = "Second Member",
+                    Role = Role.TeamMember,
+                    CreatedAt = DateTime.UtcNow
+                });
+            await context.SaveChangesAsync();
+        }
+
         if (await context.Projects.AnyAsync())
         {
             return;
@@ -46,8 +74,8 @@ public static class TestDataSeeder
             {
                 Id = TestData.AdminProjectId,
                 Name = "Alpha Website Redesign",
-                Description = "Marketing site refresh owned by the administrator",
-                OwnerId = TestData.AdminId,
+                Description = "Marketing site refresh managed by the project manager",
+                ManagerId = TestData.ManagerId,
                 CreatedAt = DateTime.UtcNow.AddDays(-10)
             },
             new Project
@@ -55,7 +83,7 @@ public static class TestDataSeeder
                 Id = TestData.ManagerProjectId,
                 Name = "Beta Mobile App",
                 Description = "Field operations app owned by the project manager",
-                OwnerId = TestData.ManagerId,
+                ManagerId = TestData.ManagerId,
                 CreatedAt = DateTime.UtcNow.AddDays(-5)
             });
 

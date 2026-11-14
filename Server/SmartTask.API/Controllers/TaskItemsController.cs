@@ -15,18 +15,23 @@ public class TaskItemsController : ControllerBase
 {
     private readonly ITaskItemService _taskItemService;
     private readonly IValidator<TaskItemQueryDto> _taskItemQueryValidator;
+    private readonly IValidator<TaskAssigneeAssignDto> _taskAssigneeAssignValidator;
 
-    public TaskItemsController(ITaskItemService taskItemService, IValidator<TaskItemQueryDto> taskItemQueryValidator)
+    public TaskItemsController(
+        ITaskItemService taskItemService,
+        IValidator<TaskItemQueryDto> taskItemQueryValidator,
+        IValidator<TaskAssigneeAssignDto> taskAssigneeAssignValidator)
     {
         _taskItemService = taskItemService;
         _taskItemQueryValidator = taskItemQueryValidator;
+        _taskAssigneeAssignValidator = taskAssigneeAssignValidator;
     }
 
     [HttpPost]
     [Authorize(Roles = "Admin,ProjectManager")]
     public async Task<ActionResult<ApiResponse<TaskItemDto>>> CreateAsync([FromQuery] Guid projectId, [FromBody] TaskItemCreateDto createDto)
     {
-        var taskItem = await _taskItemService.CreateAsync(projectId, createDto);
+        var taskItem = await _taskItemService.CreateAsync(projectId, createDto, GetUserId(), GetUserRole());
         return Ok(ApiResponse<TaskItemDto>.Ok(taskItem, "Task item created."));
     }
 
@@ -64,8 +69,22 @@ public class TaskItemsController : ControllerBase
     [Authorize(Roles = "Admin,ProjectManager")]
     public async Task<ActionResult<ApiResponse<TaskItemDto>>> UpdateAsync(Guid id, [FromBody] TaskItemCreateDto createDto)
     {
-        await _taskItemService.UpdateAsync(id, createDto);
+        await _taskItemService.UpdateAsync(id, createDto, GetUserId(), GetUserRole());
         return Ok(ApiResponse<TaskItemDto>.Ok(null, "Task item updated."));
+    }
+
+    [HttpPatch("{id:guid}/assignee")]
+    [Authorize(Roles = "Admin,ProjectManager")]
+    public async Task<ActionResult<ApiResponse<object>>> AssignAsync(Guid id, [FromBody] TaskAssigneeAssignDto assignDto)
+    {
+        var validationResult = await _taskAssigneeAssignValidator.ValidateAsync(assignDto);
+        if (!validationResult.IsValid)
+        {
+            return BadRequest(ApiResponse<object>.Error(string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage)), 400));
+        }
+
+        await _taskItemService.AssignAsync(id, assignDto.AssigneeId, GetUserId(), GetUserRole());
+        return Ok(ApiResponse<object>.Ok(null, "Task assignment updated."));
     }
 
     [HttpDelete("{id:guid}")]

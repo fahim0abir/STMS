@@ -5,10 +5,7 @@ export interface SortOption {
   label: string;
 }
 
-import { CommonModule } from '@angular/common';
-
 @Component({
-  imports: [CommonModule],
   selector: 'app-search-sort-bar',
   standalone: true,
   template: `
@@ -21,9 +18,13 @@ import { CommonModule } from '@angular/common';
         (input)="onSearch($event)"
       />
       <div class="toolbar__right">
-        <select class="toolbar__select" [value]="sortBy" (change)="onSort($event)" *ngIf="sortOptions.length">
-          <option *ngFor="let option of sortOptions" [value]="option.value">{{ option.label }}</option>
-        </select>
+        @if (sortOptions.length) {
+          <select class="toolbar__select" [value]="sortBy" (change)="onSort($event)">
+            @for (option of sortOptions; track option.value) {
+              <option [value]="option.value">{{ option.label }}</option>
+            }
+          </select>
+        }
         <button class="toolbar__order" type="button" (click)="toggleOrder()">
           {{ sortOrder === 'asc' ? 'ASC ↑' : 'DESC ↓' }}
         </button>

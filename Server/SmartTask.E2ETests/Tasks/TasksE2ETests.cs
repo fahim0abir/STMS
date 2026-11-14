@@ -173,6 +173,60 @@ public class TasksE2ETests
     }
 
     [Fact]
+    public async Task AssignTask_AsAdmin_UpdatesAssignee()
+    {
+        var created = await CreateTaskAsync(TaskStatus.ToDo, TaskPriority.Medium);
+
+        var patch = await _fixture.Api.PatchAsync(
+            $"/api/taskitems/{created.Id}/assignee",
+            new { AssigneeId = TestData.SecondMemberId },
+            _fixture.Admin.AccessToken);
+        Assert.Equal(HttpStatusCode.OK, patch.StatusCode);
+
+        var fetched = await _fixture.Api.GetAsync($"/api/taskitems/{created.Id}", _fixture.Admin.AccessToken);
+        var body = await ApiClient.ReadAsync<TaskItemDto>(fetched);
+        Assert.Equal(TestData.SecondMemberId, body.Data!.AssigneeId);
+        Assert.Equal(TestData.SecondMemberEmail, body.Data.AssigneeEmail);
+    }
+
+    [Fact]
+    public async Task AssignTask_AsProjectManager_OnForeignProject_Returns403()
+    {
+        var create = await _fixture.Api.PostAsync("/api/projects", new { Name = $"Foreign {Guid.NewGuid():N}" }, _fixture.Admin.AccessToken);
+        var project = await ApiClient.ReadAsync<ProjectDto>(create);
+        var payload = new { Title = "Foreign task", Status = TaskStatus.ToDo, Priority = TaskPriority.Low };
+        var task = await _fixture.Api.PostAsync($"/api/taskitems?projectId={project.Data!.Id}", payload, _fixture.Admin.AccessToken);
+        var taskBody = await ApiClient.ReadAsync<TaskItemDto>(task);
+
+        var patch = await _fixture.Api.PatchAsync(
+            $"/api/taskitems/{taskBody.Data!.Id}/assignee",
+            new { AssigneeId = TestData.MemberId },
+            _fixture.Manager.AccessToken);
+
+        Assert.Equal(HttpStatusCode.Forbidden, patch.StatusCode);
+    }
+
+    [Fact]
+    public async Task AssignTask_AsProjectManager_OnOwnProject_Succeeds()
+    {
+        var create = await _fixture.Api.PostAsync(
+            "/api/projects",
+            new { Name = $"Owned {Guid.NewGuid():N}", ManagerId = TestData.ManagerId },
+            _fixture.Admin.AccessToken);
+        var project = await ApiClient.ReadAsync<ProjectDto>(create);
+        var payload = new { Title = "Owned task", Status = TaskStatus.ToDo, Priority = TaskPriority.Low };
+        var task = await _fixture.Api.PostAsync($"/api/taskitems?projectId={project.Data!.Id}", payload, _fixture.Manager.AccessToken);
+        var taskBody = await ApiClient.ReadAsync<TaskItemDto>(task);
+
+        var patch = await _fixture.Api.PatchAsync(
+            $"/api/taskitems/{taskBody.Data!.Id}/assignee",
+            new { AssigneeId = TestData.MemberId },
+            _fixture.Manager.AccessToken);
+
+        Assert.Equal(HttpStatusCode.OK, patch.StatusCode);
+    }
+
+    [Fact]
     public async Task GetTask_WithUnknownId_Returns404()
     {
         var response = await _fixture.Api.GetAsync($"/api/taskitems/{Guid.NewGuid()}", _fixture.Admin.AccessToken);

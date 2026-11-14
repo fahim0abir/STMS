@@ -26,7 +26,7 @@ public class ApplicationDbContext : DbContext
             entity.Property(u => u.PasswordHash).IsRequired().HasMaxLength(256);
             entity.Property(u => u.Name).HasMaxLength(100);
             entity.HasMany(u => u.RefreshTokens).WithOne(r => r.User).HasForeignKey(r => r.UserId);
-            entity.HasMany(u => u.Projects).WithOne(p => p.Owner).HasForeignKey(p => p.OwnerId);
+            entity.HasMany(u => u.ManagedProjects).WithOne(p => p.Manager).HasForeignKey(p => p.ManagerId);
             entity.HasMany(u => u.Tasks).WithOne(t => t.Assignee).HasForeignKey(t => t.AssigneeId).IsRequired(false);
         });
 
@@ -43,7 +43,7 @@ public class ApplicationDbContext : DbContext
             entity.HasKey(p => p.Id);
             entity.Property(p => p.Name).IsRequired().HasMaxLength(100);
             entity.Property(p => p.Description).HasMaxLength(500);
-            entity.HasOne(p => p.Owner).WithMany(u => u.Projects).HasForeignKey(p => p.OwnerId);
+            entity.HasOne(p => p.Manager).WithMany(u => u.ManagedProjects).HasForeignKey(p => p.ManagerId);
             entity.HasMany(p => p.Tasks).WithOne(t => t.Project).HasForeignKey(t => t.ProjectId);
         });
 

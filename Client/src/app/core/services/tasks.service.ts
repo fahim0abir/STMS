@@ -4,6 +4,7 @@ import { Observable, map } from 'rxjs';
 import { API_BASE_URL } from '../api.config';
 import { ApiResponse } from '../../shared/models/api-response.model';
 import { AiEnhanceRequest, AiEnhanceResponse } from '../../shared/models/ai.model';
+import { TaskStatus } from '../../shared/models/enums';
 import { PagedResult } from '../../shared/models/paged-result.model';
 import {
   TaskItem,
@@ -57,6 +58,18 @@ export class TasksService {
 
   delete(id: string): Observable<void> {
     return this.http.delete<ApiResponse<object>>(`${this.tasksUrl}/${id}`).pipe(map(() => void 0));
+  }
+
+  assign(id: string, assigneeId: string | null): Observable<void> {
+    return this.http
+      .patch<ApiResponse<object>>(`${this.tasksUrl}/${id}/assignee`, { assigneeId })
+      .pipe(map(() => void 0));
+  }
+
+  updateStatus(id: string, status: TaskStatus): Observable<void> {
+    return this.http
+      .patch<ApiResponse<object>>(`${this.tasksUrl}/${id}/status`, { status })
+      .pipe(map(() => void 0));
   }
 
   enhanceDescription(request: AiEnhanceRequest): Observable<AiEnhanceResponse> {

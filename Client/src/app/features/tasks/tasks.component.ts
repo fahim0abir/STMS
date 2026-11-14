@@ -6,7 +6,10 @@ import { Project } from '../../shared/models/project.model';
 import { TaskItem, TaskItemQuery } from '../../shared/models/task.model';
 import { TasksService } from '../../core/services/tasks.service';
 import { ProjectsService } from '../../core/services/projects.service';
+import { UsersService } from '../../core/services/users.service';
 import { AuthService } from '../../core/auth/auth.service';
+import { Role } from '../../shared/models/enums';
+import { User } from '../../shared/models/user.model';
 import { PaginationComponent } from '../../shared/ui/pagination.component';
 import { SearchSortBarComponent, SortOption } from '../../shared/ui/search-sort-bar.component';
 import { ButtonComponent } from '../../shared/ui/button.component';
@@ -15,12 +18,10 @@ import { TaskTableComponent } from './components/task-table/task-table.component
 import { TaskModalComponent, TaskModalSaveEvent } from './components/task-modal/task-modal.component';
 import { FilterChip, TaskFilterChipsComponent } from './components/task-filter-chips/task-filter-chips.component';
 
-import { CommonModule } from '@angular/common';
-
 @Component({
   selector: 'app-tasks',
   standalone: true,
-  imports: [CommonModule, 
+  imports: [
     PaginationComponent,
     SearchSortBarComponent,
     ButtonComponent,
@@ -35,8 +36,12 @@ import { CommonModule } from '@angular/common';
 export class TasksComponent {
   private readonly tasksService = inject(TasksService);
   private readonly projectsService = inject(ProjectsService);
+  private readonly usersService = inject(UsersService);
   private readonly authService = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
+
+  readonly currentUserId = this.authService.currentUserValue?.id ?? '';
+  readonly assignees = signal<User[]>([]);
 
   readonly tasks = signal<TaskItem[]>([]);
   readonly loading = signal(true);
@@ -168,12 +173,14 @@ export class TasksComponent {
     this.modalError.set('');
     this.modalOpen.set(true);
     this.ensureProjects();
+    this.ensureAssignees();
   }
 
   openEdit(task: TaskItem): void {
     this.editing.set(task);
     this.modalError.set('');
     this.modalOpen.set(true);
+    this.ensureAssignees();
   }
 
   closeModal(): void {
@@ -251,6 +258,27 @@ export class TasksComponent {
           this.error.set(err?.error?.message || 'Failed to load tasks.');
           this.loading.set(false);
         },
+      });
+  }
+
+  onTaskStatusChange(event: { task: TaskItem; status: TaskStatus }): void {
+    this.tasksService
+      .updateStatus(event.task.id, event.status)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => this.load(),
+        error: (err) => this.error.set(err?.error?.message || 'Failed to update task status.'),
+      });
+  }
+
+  private ensureAssignees(): void {
+    if (!this.canManage || this.assignees().length) return;
+    this.usersService
+      .getAssignableUsers(Role.TeamMember)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (users) => this.assignees.set(users),
+        error: () => this.modalError.set('Failed to load team members.'),
       });
   }
 

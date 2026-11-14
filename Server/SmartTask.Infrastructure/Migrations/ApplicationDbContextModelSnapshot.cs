@@ -17,7 +17,7 @@ namespace SmartTask.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.8")
+                .HasAnnotation("ProductVersion", "9.0.10")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -35,20 +35,20 @@ namespace SmartTask.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<Guid>("ManagerId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
-
-                    b.Property<Guid>("OwnerId")
-                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OwnerId");
+                    b.HasIndex("ManagerId");
 
                     b.ToTable("Projects");
                 });
@@ -174,13 +174,13 @@ namespace SmartTask.Infrastructure.Migrations
 
             modelBuilder.Entity("SmartTask.Domain.Entities.Project", b =>
                 {
-                    b.HasOne("SmartTask.Domain.Entities.User", "Owner")
-                        .WithMany("Projects")
-                        .HasForeignKey("OwnerId")
+                    b.HasOne("SmartTask.Domain.Entities.User", "Manager")
+                        .WithMany("ManagedProjects")
+                        .HasForeignKey("ManagerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Owner");
+                    b.Navigation("Manager");
                 });
 
             modelBuilder.Entity("SmartTask.Domain.Entities.RefreshToken", b =>
@@ -218,7 +218,7 @@ namespace SmartTask.Infrastructure.Migrations
 
             modelBuilder.Entity("SmartTask.Domain.Entities.User", b =>
                 {
-                    b.Navigation("Projects");
+                    b.Navigation("ManagedProjects");
 
                     b.Navigation("RefreshTokens");
 

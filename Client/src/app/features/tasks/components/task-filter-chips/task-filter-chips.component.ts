@@ -5,24 +5,22 @@ export interface FilterChip<T> {
   label: string;
 }
 
-import { CommonModule } from '@angular/common';
-
 @Component({
-  imports: [CommonModule],
   selector: 'app-task-filter-chips',
   standalone: true,
   template: `
     <div class="chips">
       <span class="chips__label">{{ label }}</span>
-      <button
-        *ngFor="let chip of chips"
-        type="button"
-        class="chips__chip"
-        [class.chips__chip--active]="chip.value === active"
-        (click)="select(chip.value)"
-      >
-        {{ chip.label }}
-      </button>
+      @for (chip of chips; track chip.label) {
+        <button
+          type="button"
+          class="chips__chip"
+          [class.chips__chip--active]="chip.value === active"
+          (click)="select(chip.value)"
+        >
+          {{ chip.label }}
+        </button>
+      }
     </div>
   `,
   styles: [

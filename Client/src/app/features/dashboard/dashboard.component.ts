@@ -32,12 +32,10 @@ const PRIORITY_COLORS: Record<string, string> = {
   Critical: '#dc2626',
 };
 
-import { CommonModule } from '@angular/common';
-
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, 
+  imports: [
     SpinnerComponent,
     KpiCardComponent,
     StatBreakdownComponent,

@@ -75,6 +75,12 @@ export class AuthService {
     const role = this.currentUserValue?.role;
     return !!role && roles.includes(role);
   }
+  updateCurrentUser(user: User): void {
+    this.tokenService.setUser(user);
+    this.currentUserSubject.next(user);
+  }
+
+
 
   private applySession(result: AuthResult): User {
     const user = normalizeUser(result.user) as User;

@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SmartTask.Application.DTOs;
@@ -31,7 +32,10 @@ public class DashboardController : ControllerBase
     [HttpGet("stats")]
     public async Task<ActionResult<ApiResponse<DashboardStatsDto>>> GetStatsAsync()
     {
-        var stats = await _dashboardService.GetStatsAsync();
+        var stats = await _dashboardService.GetStatsAsync(GetUserId(), GetUserRole());
         return Ok(ApiResponse<DashboardStatsDto>.Ok(stats, "Dashboard stats retrieved."));
     }
+
+    private Guid GetUserId() => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+    private string GetUserRole() => User.FindFirstValue(ClaimTypes.Role) ?? string.Empty;
 }

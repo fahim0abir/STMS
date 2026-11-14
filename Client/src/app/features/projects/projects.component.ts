@@ -1,9 +1,12 @@
 ﻿import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
+import { Subject, debounceTime, distinctUntilChanged, of, switchMap } from 'rxjs';
 import { ProjectsService } from '../../core/services/projects.service';
+import { UsersService } from '../../core/services/users.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { Project, ProjectUpsert } from '../../shared/models/project.model';
+import { User } from '../../shared/models/user.model';
+import { Role } from '../../shared/models/enums';
 import { PaginationComponent } from '../../shared/ui/pagination.component';
 import { SearchSortBarComponent, SortOption } from '../../shared/ui/search-sort-bar.component';
 import { ButtonComponent } from '../../shared/ui/button.component';
@@ -27,8 +30,11 @@ import { ProjectModalComponent } from './components/project-modal/project-modal.
 })
 export class ProjectsComponent {
   private readonly projectsService = inject(ProjectsService);
+  private readonly usersService = inject(UsersService);
   private readonly authService = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
+
+  readonly managers = signal<User[]>([]);
 
   readonly projects = signal<Project[]>([]);
   readonly loading = signal(true);
@@ -43,6 +49,7 @@ export class ProjectsComponent {
 
   readonly canManage = this.authService.hasRole('Admin', 'ProjectManager');
   readonly canDelete = this.authService.hasRole('Admin');
+  readonly canAssignManager = this.authService.hasRole('Admin');
 
   readonly modalOpen = signal(false);
   readonly editing = signal<Project | null>(null);
@@ -103,12 +110,14 @@ export class ProjectsComponent {
     this.editing.set(null);
     this.modalError.set('');
     this.modalOpen.set(true);
+    this.ensureManagers();
   }
 
   openEdit(project: Project): void {
     this.editing.set(project);
     this.modalError.set('');
     this.modalOpen.set(true);
+    this.ensureManagers();
   }
 
   closeModal(): void {
@@ -126,17 +135,39 @@ export class ProjectsComponent {
       ? this.projectsService.update(editing.id, dto)
       : this.projectsService.create(dto);
 
-    request$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => {
-        this.saving.set(false);
-        this.modalOpen.set(false);
-        this.load();
-      },
-      error: (err) => {
-        this.saving.set(false);
-        this.modalError.set(err?.error?.message || 'Failed to save project.');
-      },
-    });
+    request$
+      .pipe(
+        switchMap(() => {
+          const shouldAssignManager =
+            !!editing && this.canAssignManager && !!dto.managerId && dto.managerId !== editing.managerId;
+          return shouldAssignManager
+            ? this.projectsService.assignManager(editing!.id, dto.managerId!)
+            : of(null);
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: () => {
+          this.saving.set(false);
+          this.modalOpen.set(false);
+          this.load();
+        },
+        error: (err) => {
+          this.saving.set(false);
+          this.modalError.set(err?.error?.message || 'Failed to save project.');
+        },
+      });
+  }
+
+  private ensureManagers(): void {
+    if (!this.canAssignManager || this.managers().length) return;
+    this.usersService
+      .getAssignableUsers(Role.ProjectManager)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (users) => this.managers.set(users),
+        error: () => this.modalError.set('Failed to load project managers.'),
+      });
   }
 
   remove(project: Project): void {

@@ -1,16 +1,15 @@
 ﻿import { Component, Input } from '@angular/core';
 
-import { CommonModule } from '@angular/common';
-
 @Component({
-  imports: [CommonModule],
   selector: 'app-kpi-card',
   standalone: true,
   template: `
     <div class="kpi kpi--{{ tone }}">
       <span class="kpi__label">{{ label }}</span>
       <span class="kpi__value">{{ value }}</span>
-      <span *ngIf="hint" class="kpi__hint">{{ hint }}</span>
+      @if (hint) {
+        <span class="kpi__hint">{{ hint }}</span>
+      }
     </div>
   `,
   styles: [

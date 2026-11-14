@@ -1,23 +1,40 @@
-<div class="modal" *ngIf="open">
+@if (open) {
+<div class="modal">
   <div class="modal__backdrop" (click)="close.emit()"></div>
   <div class="modal__panel" role="dialog" aria-modal="true">
     <h2 class="modal__title">{{ isEdit ? 'Edit Task' : 'New Task' }}</h2>
 
     <form [formGroup]="form" (ngSubmit)="submit()" class="modal__form">
-      <label class="modal__field" *ngIf="!isEdit">
-        <span>Project *</span>
-        <select formControlName="projectId">
-          <option value="">Select a project…</option>
-          <option *ngFor="let project of projects" [value]="project.id">{{ project.name }}</option>
+      @if (!isEdit) {
+        <label class="modal__field">
+          <span>Project *</span>
+          <select formControlName="projectId">
+            <option value="">Select a project…</option>
+            @for (project of projects; track project.id) {
+              <option [value]="project.id">{{ project.name }}</option>
+            }
+          </select>
+        </label>
+      }
+
+      <label class="modal__field">
+        <span>Assignee</span>
+        <select formControlName="assigneeId">
+          <option value="">Unassigned</option>
+          @for (member of assignees; track member.id) {
+            <option [value]="member.id">{{ member.name || member.email }}</option>
+          }
         </select>
       </label>
 
       <label class="modal__field">
         <span>Title *</span>
         <input type="text" formControlName="title" maxlength="200" />
-        <small class="modal__error" *ngIf="form.controls.title.touched && form.controls.title.invalid">
-          Title is required (max 200 characters).
-        </small>
+        @if (form.controls.title.touched && form.controls.title.invalid) {
+          <small class="modal__error">
+            Title is required (max 200 characters).
+          </small>
+        }
       </label>
 
       <label class="modal__field">
@@ -32,56 +49,78 @@
         <app-btn size="sm" variant="outline" [loading]="aiLoading()" (click)="improveWithAi()">
           Improve with AI
         </app-btn>
-        <app-btn size="sm" variant="ghost" *ngIf="canRevert()" (click)="revertDescription()">
-          Revert description
-        </app-btn>
+        @if (canRevert()) {
+          <app-btn size="sm" variant="ghost" (click)="revertDescription()">
+            Revert description
+          </app-btn>
+        }
       </div>
 
-      <p class="modal__ai-message" [class.modal__ai-message--warn]="aiUsedFallback()" *ngIf="aiMessage()">
-        {{ aiMessage() }}
-      </p>
-
-      <div class="modal__suggestion" *ngIf="aiSuggestion() as suggestion">
-        <div class="modal__suggestion-head">
-          <span>
-            AI suggestion ({{ suggestion.enhancedDescription.length }}/{{ maxDescriptionLength }})
-            <em *ngIf="suggestion.estimatedHours"> · ~{{ suggestion.estimatedHours }}h</em>
-          </span>
-        </div>
-        <p class="modal__suggestion-title" *ngIf="suggestion.suggestedTitle">
-          <strong>Title:</strong> {{ suggestion.suggestedTitle }}
+      @if (aiMessage()) {
+        <p class="modal__ai-message" [class.modal__ai-message--warn]="aiUsedFallback()">
+          {{ aiMessage() }}
         </p>
-        <p class="modal__suggestion-text">{{ suggestion.enhancedDescription }}</p>
-        <div class="modal__suggestion-list" *ngIf="suggestion.acceptanceCriteria.length">
-          <strong>Acceptance criteria</strong>
-          <ul>
-            <li *ngFor="let item of suggestion.acceptanceCriteria">{{ item }}</li>
-          </ul>
+      }
+
+      @if (aiSuggestion(); as suggestion) {
+        <div class="modal__suggestion">
+          <div class="modal__suggestion-head">
+            <span>
+              AI suggestion ({{ suggestion.enhancedDescription.length }}/{{ maxDescriptionLength }})
+              @if (suggestion.estimatedHours) {
+                <em> · ~{{ suggestion.estimatedHours }}h</em>
+              }
+            </span>
+          </div>
+          @if (suggestion.suggestedTitle) {
+            <p class="modal__suggestion-title">
+              <strong>Title:</strong> {{ suggestion.suggestedTitle }}
+            </p>
+          }
+          <p class="modal__suggestion-text">{{ suggestion.enhancedDescription }}</p>
+          @if (suggestion.acceptanceCriteria.length) {
+            <div class="modal__suggestion-list">
+              <strong>Acceptance criteria</strong>
+              <ul>
+                @for (item of suggestion.acceptanceCriteria; track $index) {
+                  <li>{{ item }}</li>
+                }
+              </ul>
+            </div>
+          }
+          @if (suggestion.subtasks.length) {
+            <div class="modal__suggestion-list">
+              <strong>Suggested subtasks</strong>
+              <ul>
+                @for (item of suggestion.subtasks; track $index) {
+                  <li>{{ item }}</li>
+                }
+              </ul>
+            </div>
+          }
+          <div class="modal__suggestion-actions">
+            <app-btn size="sm" variant="primary" (click)="acceptSuggestion()">Accept</app-btn>
+            <app-btn size="sm" variant="ghost" (click)="rejectSuggestion()">Reject</app-btn>
+          </div>
         </div>
-        <div class="modal__suggestion-list" *ngIf="suggestion.subtasks.length">
-          <strong>Suggested subtasks</strong>
-          <ul>
-            <li *ngFor="let item of suggestion.subtasks">{{ item }}</li>
-          </ul>
-        </div>
-        <div class="modal__suggestion-actions">
-          <app-btn size="sm" variant="primary" (click)="acceptSuggestion()">Accept</app-btn>
-          <app-btn size="sm" variant="ghost" (click)="rejectSuggestion()">Reject</app-btn>
-        </div>
-      </div>
+      }
 
       <div class="modal__row">
         <label class="modal__field">
           <span>Status</span>
           <select formControlName="status">
-            <option *ngFor="let option of statusOptions" [value]="option.value">{{ option.label }}</option>
+            @for (option of statusOptions; track option.value) {
+              <option [value]="option.value">{{ option.label }}</option>
+            }
           </select>
         </label>
 
         <label class="modal__field">
           <span>Priority</span>
           <select formControlName="priority">
-            <option *ngFor="let option of priorityOptions" [value]="option.value">{{ option.label }}</option>
+            @for (option of priorityOptions; track option.value) {
+              <option [value]="option.value">{{ option.label }}</option>
+            }
           </select>
         </label>
 
@@ -91,7 +130,9 @@
         </label>
       </div>
 
-      <p class="modal__error" *ngIf="errorMessage">{{ errorMessage }}</p>
+      @if (errorMessage) {
+        <p class="modal__error">{{ errorMessage }}</p>
+      }
 
       <div class="modal__actions">
         <app-btn variant="ghost" (click)="close.emit()">Cancel</app-btn>
@@ -102,3 +143,4 @@
     </form>
   </div>
 </div>
+}

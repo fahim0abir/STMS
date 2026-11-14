@@ -81,6 +81,11 @@ builder.Services.AddScoped<ITaskDescriptionEnhancementService, TaskDescriptionEn
 builder.Services.AddScoped<IValidator<ProjectQueryDto>, ProjectQueryDtoValidator>();
 builder.Services.AddScoped<IValidator<TaskItemQueryDto>, TaskItemQueryDtoValidator>();
 builder.Services.AddScoped<IValidator<EnhanceDescriptionRequestDto>, EnhanceDescriptionRequestDtoValidator>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IValidator<CreateUserDto>, CreateUserDtoValidator>();
+builder.Services.AddScoped<IValidator<UpdateProfileDto>, UpdateProfileDtoValidator>();
+builder.Services.AddScoped<IValidator<ProjectManagerAssignDto>, ProjectManagerAssignDtoValidator>();
+builder.Services.AddScoped<IValidator<TaskAssigneeAssignDto>, TaskAssigneeAssignDtoValidator>();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>

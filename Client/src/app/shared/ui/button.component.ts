@@ -1,9 +1,6 @@
 ﻿import { Component, Input } from '@angular/core';
 
-import { CommonModule } from '@angular/common';
-
 @Component({
-  imports: [CommonModule],
   selector: 'app-btn',
   standalone: true,
   template: `
@@ -12,7 +9,9 @@ import { CommonModule } from '@angular/common';
       [class]="btnClass"
       [disabled]="disabled || loading"
     >
-      <span *ngIf="loading" class="btn__spinner"></span>
+      @if (loading) {
+        <span class="btn__spinner"></span>
+      }
       <ng-content></ng-content>
     </button>
   `,

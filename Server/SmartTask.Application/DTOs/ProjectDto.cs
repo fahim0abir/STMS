@@ -5,5 +5,7 @@ public record ProjectDto
     public Guid Id { get; init; }
     public string Name { get; init; } = string.Empty;
     public string? Description { get; init; }
-    public string OwnerEmail { get; init; } = string.Empty;
+    public Guid? ManagerId { get; init; }
+    public string ManagerEmail { get; init; } = string.Empty;
+    public string? ManagerName { get; init; }
 };

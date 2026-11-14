@@ -9,5 +9,9 @@ public class ProjectCreateDtoValidator : AbstractValidator<ProjectCreateDto>
     {
         RuleFor(x => x.Name).NotEmpty().MaximumLength(100);
         RuleFor(x => x.Description).MaximumLength(500);
+        RuleFor(x => x.ManagerId!.Value)
+            .NotEmpty()
+            .When(x => x.ManagerId.HasValue)
+            .WithMessage("Selected project manager is invalid.");
     }
 }

@@ -1,6 +1,7 @@
 ﻿import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Project, ProjectUpsert } from '../../../../shared/models/project.model';
+import { User } from '../../../../shared/models/user.model';
 import { ButtonComponent } from '../../../../shared/ui/button.component';
 
 @Component({
@@ -31,6 +32,18 @@ import { ButtonComponent } from '../../../../shared/ui/button.component';
             }
           </label>
 
+          @if (canAssignManager) {
+            <label class="modal__field">
+              <span>Project manager</span>
+              <select formControlName="managerId">
+                <option value="">Unassigned</option>
+                @for (manager of managers; track manager.id) {
+                  <option [value]="manager.id">{{ manager.name || manager.email }}</option>
+                }
+              </select>
+            </label>
+          }
+
           @if (errorMessage) {
             <p class="modal__error">{{ errorMessage }}</p>
           }
@@ -55,15 +68,16 @@ import { ButtonComponent } from '../../../../shared/ui/button.component';
       .modal__title { margin: 0 0 1rem; font-size: 1.125rem; font-weight: 600; color: #111827; }
       .modal__form { display: flex; flex-direction: column; gap: 1rem; }
       .modal__field { display: flex; flex-direction: column; gap: 0.375rem; font-size: 0.8rem; color: #374151; }
-      .modal__field input, .modal__field textarea {
+      .modal__field input, .modal__field textarea, .modal__field select {
         border: 1px solid #d1d5db;
         border-radius: 0.5rem;
         padding: 0.5rem 0.75rem;
         font-size: 0.875rem;
         font-family: inherit;
         outline: none;
+        background: #fff;
       }
-      .modal__field input:focus, .modal__field textarea:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgb(37 99 235 / 0.15); }
+      .modal__field input:focus, .modal__field textarea:focus, .modal__field select:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgb(37 99 235 / 0.15); }
       .modal__error { color: #b91c1c; font-size: 0.75rem; margin: 0; }
       .modal__actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.5rem; }
     `,
@@ -76,6 +90,8 @@ export class ProjectModalComponent implements OnChanges {
   @Input() project: Project | null = null;
   @Input() saving = false;
   @Input() errorMessage = '';
+  @Input() managers: User[] = [];
+  @Input() canAssignManager = false;
 
   @Output() close = new EventEmitter<void>();
   @Output() save = new EventEmitter<ProjectUpsert>();
@@ -83,6 +99,7 @@ export class ProjectModalComponent implements OnChanges {
   readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(200)]],
     description: ['', [Validators.maxLength(1000)]],
+    managerId: [''],
   });
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -90,6 +107,7 @@ export class ProjectModalComponent implements OnChanges {
       this.form.reset({
         name: this.project?.name ?? '',
         description: this.project?.description ?? '',
+        managerId: this.project?.managerId ?? '',
       });
     }
   }
@@ -100,7 +118,12 @@ export class ProjectModalComponent implements OnChanges {
       return;
     }
     if (this.saving) return;
-    this.save.emit(this.form.getRawValue());
+    const raw = this.form.getRawValue();
+    this.save.emit({
+      name: raw.name.trim(),
+      description: raw.description?.trim() || null,
+      managerId: this.canAssignManager && raw.managerId ? raw.managerId : null,
+    });
   }
 }
 

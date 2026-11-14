@@ -9,18 +9,33 @@ namespace SmartTask.UnitTests.Services;
 public class ProjectServiceTests
 {
     [Fact]
-    public async Task CreateAsync_PersistsProjectAndReturnsOwnerEmail()
+    public async Task CreateAsync_PersistsProjectAndReturnsManagerEmail()
     {
         using var db = new TestDatabase();
-        var owner = db.AddUser("owner@example.com", Role.ProjectManager);
+        var manager = db.AddUser("manager@example.com", Role.ProjectManager);
         var service = new ProjectService(db.Projects, db.Users);
 
-        var dto = await service.CreateAsync(owner.Id, new ProjectCreateDto { Name = "Alpha", Description = "First" });
+        var dto = await service.CreateAsync(manager.Id, "ProjectManager", new ProjectCreateDto { Name = "Alpha", Description = "First" });
 
         Assert.NotEqual(Guid.Empty, dto.Id);
         Assert.Equal("Alpha", dto.Name);
-        Assert.Equal("owner@example.com", dto.OwnerEmail);
+        Assert.Equal(manager.Id, dto.ManagerId);
+        Assert.Equal("manager@example.com", dto.ManagerEmail);
         Assert.Single(db.Context.Projects);
+    }
+
+    [Fact]
+    public async Task CreateAsync_AsAdmin_AssignsSelectedManager()
+    {
+        using var db = new TestDatabase();
+        var admin = db.AddUser("admin@example.com", Role.Admin);
+        var manager = db.AddUser("manager@example.com", Role.ProjectManager);
+        var service = new ProjectService(db.Projects, db.Users);
+
+        var dto = await service.CreateAsync(admin.Id, "Admin", new ProjectCreateDto { Name = "Beta", ManagerId = manager.Id });
+
+        Assert.Equal(manager.Id, dto.ManagerId);
+        Assert.Equal("manager@example.com", dto.ManagerEmail);
     }
 
     [Fact]
@@ -33,17 +48,17 @@ public class ProjectServiceTests
     }
 
     [Fact]
-    public async Task GetByIdAsync_ReturnsMappedOwnerEmail()
+    public async Task GetByIdAsync_ReturnsMappedManagerEmail()
     {
         using var db = new TestDatabase();
-        var owner = db.AddUser("pm@example.com");
-        var project = db.AddProject(owner.Id, "Alpha");
+        var manager = db.AddUser("pm@example.com");
+        var project = db.AddProject(manager.Id, "Alpha");
         var service = new ProjectService(db.Projects, db.Users);
 
         var dto = await service.GetByIdAsync(project.Id);
 
         Assert.NotNull(dto);
-        Assert.Equal("pm@example.com", dto!.OwnerEmail);
+        Assert.Equal("pm@example.com", dto!.ManagerEmail);
     }
 
     [Fact]
@@ -70,6 +85,34 @@ public class ProjectServiceTests
         Assert.Equal("New", stored!.Name);
         Assert.Equal("Updated", stored.Description);
         Assert.NotNull(stored.UpdatedAt);
+    }
+
+    [Fact]
+    public async Task AssignManagerAsync_ReassignsToAnotherProjectManager()
+    {
+        using var db = new TestDatabase();
+        var currentManager = db.AddUser("pm@example.com", Role.ProjectManager);
+        var nextManager = db.AddUser("next@example.com", Role.ProjectManager);
+        var project = db.AddProject(currentManager.Id);
+        var service = new ProjectService(db.Projects, db.Users);
+
+        await service.AssignManagerAsync(project.Id, nextManager.Id);
+
+        var stored = await db.Context.Projects.FindAsync(project.Id);
+        Assert.Equal(nextManager.Id, stored!.ManagerId);
+    }
+
+    [Fact]
+    public async Task AssignManagerAsync_WithNonManagerRole_ThrowsInvalidOperation()
+    {
+        using var db = new TestDatabase();
+        var manager = db.AddUser("pm@example.com", Role.ProjectManager);
+        var member = db.AddUser("dev@example.com", Role.TeamMember);
+        var project = db.AddProject(manager.Id);
+        var service = new ProjectService(db.Projects, db.Users);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.AssignManagerAsync(project.Id, member.Id));
     }
 
     [Fact]

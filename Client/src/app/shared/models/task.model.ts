@@ -10,6 +10,7 @@ export interface TaskItem {
   priority: TaskPriority;
   assigneeId?: string | null;
   assigneeEmail?: string | null;
+  assigneeName?: string | null;
   dueAt?: string | null;
   createdAt?: string;
   updatedAt?: string | null;

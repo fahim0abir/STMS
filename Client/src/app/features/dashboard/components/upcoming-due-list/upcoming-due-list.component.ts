@@ -1,5 +1,4 @@
 ﻿import { Component, Input } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { BadgeComponent } from '../../../../shared/ui/badge.component';
 import { TaskItem } from '../../../../shared/models/task.model';
 import { TASK_PRIORITY_LABELS, TASK_STATUS_LABELS } from '../../../../shared/models/enums';
@@ -7,23 +6,29 @@ import { TASK_PRIORITY_LABELS, TASK_STATUS_LABELS } from '../../../../shared/mod
 @Component({
   selector: 'app-upcoming-due-list',
   standalone: true,
-  imports: [CommonModule, BadgeComponent],
+  imports: [BadgeComponent],
   template: `
     <div class="upcoming">
       <h3 class="upcoming__title">Upcoming Due</h3>
-      <p *ngIf="!tasks.length" class="upcoming__empty">Nothing due soon.</p>
-      <ul *ngIf="tasks.length" class="upcoming__list">
-        <li *ngFor="let task of tasks" class="upcoming__item">
-          <div class="upcoming__info">
-            <span class="upcoming__name">{{ task.title }}</span>
-            <span class="upcoming__meta">{{ task.assigneeEmail || 'Unassigned' }}</span>
-          </div>
-          <div class="upcoming__badges">
-            <app-badge variant="secondary" [label]="statusLabel(task)"></app-badge>
-            <app-badge [variant]="priorityVariant(task)" [label]="priorityLabel(task)"></app-badge>
-          </div>
-        </li>
-      </ul>
+      @if (!tasks.length) {
+        <p class="upcoming__empty">Nothing due soon.</p>
+      }
+      @if (tasks.length) {
+        <ul class="upcoming__list">
+          @for (task of tasks; track task.id) {
+            <li class="upcoming__item">
+              <div class="upcoming__info">
+                <span class="upcoming__name">{{ task.title }}</span>
+                <span class="upcoming__meta">{{ task.assigneeEmail || 'Unassigned' }}</span>
+              </div>
+              <div class="upcoming__badges">
+                <app-badge variant="secondary" [label]="statusLabel(task)"></app-badge>
+                <app-badge [variant]="priorityVariant(task)" [label]="priorityLabel(task)"></app-badge>
+              </div>
+            </li>
+          }
+        </ul>
+      }
     </div>
   `,
   styles: [

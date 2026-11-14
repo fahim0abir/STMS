@@ -22,8 +22,16 @@ public class TaskItemService : ITaskItemService
         _userRepository = userRepository;
     }
 
-    public async Task<TaskItemDto> CreateAsync(Guid projectId, TaskItemCreateDto createDto)
+    public async Task<TaskItemDto> CreateAsync(Guid projectId, TaskItemCreateDto createDto, Guid currentUserId, string currentRole)
     {
+        var role = Enum.Parse<Role>(currentRole, ignoreCase: true);
+        var project = await _projectRepository.GetByIdAsync(projectId);
+        if (project == null)
+            throw new NotFoundException(nameof(Project), projectId);
+
+        EnsureCanManageProject(project, currentUserId, role);
+        await EnsureAssigneeIsTeamMemberAsync(createDto.AssigneeId, currentUserId);
+
         var taskItem = new TaskItem
         {
             Id = Guid.NewGuid(),
@@ -38,7 +46,8 @@ public class TaskItemService : ITaskItemService
         };
         await _taskRepository.AddAsync(taskItem);
         await _taskRepository.SaveChangesAsync();
-        return Map(taskItem, string.Empty);
+        var assignee = taskItem.AssigneeId.HasValue ? await _userRepository.GetByIdAsync(taskItem.AssigneeId.Value) : null;
+        return Map(taskItem, assignee);
     }
 
     public async Task<TaskItemDto?> GetByIdAsync(Guid id)
@@ -46,7 +55,7 @@ public class TaskItemService : ITaskItemService
         var taskItem = await _taskRepository.GetByIdAsync(id);
         if (taskItem == null) return null;
         var assignee = taskItem.AssigneeId.HasValue ? await _userRepository.GetByIdAsync(taskItem.AssigneeId.Value) : null;
-        return Map(taskItem, assignee?.Email ?? string.Empty);
+        return Map(taskItem, assignee);
     }
 
     public async Task<IEnumerable<TaskItemDto>> GetByProjectAsync(Guid projectId)
@@ -54,8 +63,23 @@ public class TaskItemService : ITaskItemService
         var items = await _taskRepository.AsQueryable()
             .Where(t => t.ProjectId == projectId)
             .OrderByDescending(t => t.CreatedAt)
+            .Select(t => new TaskItemDto
+            {
+                Id = t.Id,
+                ProjectId = t.ProjectId,
+                Title = t.Title,
+                Description = t.Description,
+                Status = t.Status,
+                Priority = t.Priority,
+                AssigneeId = t.AssigneeId,
+                AssigneeEmail = t.Assignee != null ? t.Assignee.Email : null,
+                AssigneeName = t.Assignee != null ? t.Assignee.Name : null,
+                DueAt = t.DueAt,
+                CreatedAt = t.CreatedAt,
+                UpdatedAt = t.UpdatedAt
+            })
             .ToListAsync();
-        return items.Select(i => Map(i, string.Empty));
+        return items;
     }
 
     public async Task<PagedResult<TaskItemDto>> GetPagedAsync(TaskItemQueryDto query, Guid currentUserId, string currentUserRole)
@@ -87,6 +111,7 @@ public class TaskItemService : ITaskItemService
             Status = t.Status,
             Priority = t.Priority,
             AssigneeEmail = t.Assignee != null ? t.Assignee.Email : null,
+            AssigneeName = t.Assignee != null ? t.Assignee.Name : null,
             ProjectId = t.ProjectId,
             AssigneeId = t.AssigneeId,
             DueAt = t.DueAt,
@@ -97,11 +122,18 @@ public class TaskItemService : ITaskItemService
         return await dtoQuery.ToPagedResultAsync(query.PageNumber, query.PageSize);
     }
 
-    public async Task UpdateAsync(Guid id, TaskItemCreateDto createDto)
+    public async Task UpdateAsync(Guid id, TaskItemCreateDto createDto, Guid currentUserId, string currentRole)
     {
-        var taskItem = await _taskRepository.GetByIdAsync(id);
+        var role = Enum.Parse<Role>(currentRole, ignoreCase: true);
+        var taskItem = await _taskRepository.AsQueryable()
+            .Include(t => t.Project)
+            .FirstOrDefaultAsync(t => t.Id == id);
         if (taskItem == null)
             throw new NotFoundException(nameof(TaskItem), id);
+
+        EnsureCanManageProject(taskItem.Project, currentUserId, role);
+        await EnsureAssigneeIsTeamMemberAsync(createDto.AssigneeId, currentUserId, taskItem.AssigneeId);
+
         taskItem.Title = createDto.Title;
         taskItem.Description = createDto.Description;
         taskItem.Status = createDto.Status;
@@ -132,7 +164,47 @@ public class TaskItemService : ITaskItemService
         await _taskRepository.SaveChangesAsync();
     }
 
-    private static TaskItemDto Map(TaskItem t, string assigneeEmail) => new()
+    public async Task AssignAsync(Guid id, Guid? assigneeId, Guid currentUserId, string currentRole)
+    {
+        var role = Enum.Parse<Role>(currentRole, ignoreCase: true);
+        var taskItem = await _taskRepository.AsQueryable()
+            .Include(t => t.Project)
+            .FirstOrDefaultAsync(t => t.Id == id);
+        if (taskItem == null)
+            throw new NotFoundException(nameof(TaskItem), id);
+
+        EnsureCanManageProject(taskItem.Project, currentUserId, role);
+        await EnsureAssigneeIsTeamMemberAsync(assigneeId, currentUserId, taskItem.AssigneeId);
+
+        taskItem.AssigneeId = assigneeId;
+        taskItem.UpdatedAt = DateTime.UtcNow;
+        await _taskRepository.SaveChangesAsync();
+    }
+
+    private static void EnsureCanManageProject(Project project, Guid currentUserId, Role role)
+    {
+        if (role == Role.Admin) return;
+        if (role == Role.ProjectManager && project.ManagerId == currentUserId) return;
+
+        throw new ForbiddenException("Only the assigned project manager or an administrator can manage tasks in this project.");
+    }
+
+    private async Task EnsureAssigneeIsTeamMemberAsync(Guid? assigneeId, Guid currentUserId, Guid? currentAssigneeId = null)
+    {
+        if (!assigneeId.HasValue) return;
+
+        var assignee = await _userRepository.GetByIdAsync(assigneeId.Value);
+        if (assignee == null)
+            throw new NotFoundException(nameof(User), assigneeId.Value);
+
+        if (assignee.Id == currentUserId && assignee.Id != currentAssigneeId)
+            throw new InvalidOperationException("You cannot assign a task to yourself.");
+
+        if (assignee.Role != Role.TeamMember)
+            throw new InvalidOperationException("Tasks can only be assigned to team members.");
+    }
+
+    private static TaskItemDto Map(TaskItem t, User? assignee) => new()
     {
         Id = t.Id,
         ProjectId = t.ProjectId,
@@ -141,7 +213,8 @@ public class TaskItemService : ITaskItemService
         Status = t.Status,
         Priority = t.Priority,
         AssigneeId = t.AssigneeId,
-        AssigneeEmail = assigneeEmail,
+        AssigneeEmail = assignee?.Email,
+        AssigneeName = assignee?.Name,
         DueAt = t.DueAt,
         CreatedAt = t.CreatedAt,
         UpdatedAt = t.UpdatedAt
@@ -152,7 +225,7 @@ public class TaskItemService : ITaskItemService
         return role switch
         {
             Role.Admin => q,
-            Role.ProjectManager => q.Where(t => t.Project.OwnerId == currentUserId),
+            Role.ProjectManager => q.Where(t => t.Project.ManagerId == currentUserId),
             _ => q.Where(t => t.AssigneeId == currentUserId)
         };
     }

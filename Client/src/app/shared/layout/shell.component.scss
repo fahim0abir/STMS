@@ -162,3 +162,18 @@
     margin-left: 0;
   }
 }
+.shell__user--link {
+  text-decoration: none;
+  padding: 0.5rem;
+  margin: 0 -0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  transition: background 0.2s;
+}
+
+.shell__user--link:hover {
+  background: #374151;
+}
+
+.shell__user--link:hover .shell__user-name {
+  color: #fff;
+}

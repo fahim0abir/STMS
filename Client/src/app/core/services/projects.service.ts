@@ -29,6 +29,12 @@ export class ProjectsService {
     return this.http.put<ApiResponse<Project>>(`${this.baseUrl}/${id}`, dto).pipe(map((res) => res.data));
   }
 
+  assignManager(id: string, managerId: string): Observable<void> {
+    return this.http
+      .patch<ApiResponse<object>>(`${this.baseUrl}/${id}/manager`, { managerId })
+      .pipe(map(() => void 0));
+  }
+
   delete(id: string): Observable<void> {
     return this.http.delete<ApiResponse<object>>(`${this.baseUrl}/${id}`).pipe(map(() => void 0));
   }

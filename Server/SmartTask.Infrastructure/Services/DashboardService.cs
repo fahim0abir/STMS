@@ -20,12 +20,33 @@ public class DashboardService : IDashboardService
         _taskItemRepository = taskItemRepository;
     }
 
-    public async Task<DashboardStatsDto> GetStatsAsync()
+    public async Task<DashboardStatsDto> GetStatsAsync(Guid currentUserId, string currentRole)
     {
+        var role = Enum.Parse<Role>(currentRole, ignoreCase: true);
         var now = DateTime.UtcNow;
+
+        var projects = _projectRepository.AsQueryable();
         var tasks = _taskItemRepository.AsQueryable();
 
-        var totalProjects = await _projectRepository.AsQueryable().CountAsync();
+        string scope;
+        switch (role)
+        {
+            case Role.Admin:
+                scope = "All projects and tasks";
+                break;
+            case Role.ProjectManager:
+                projects = projects.Where(p => p.ManagerId == currentUserId);
+                tasks = tasks.Where(t => t.Project.ManagerId == currentUserId);
+                scope = "Projects you manage";
+                break;
+            default:
+                projects = projects.Where(p => p.Tasks.Any(t => t.AssigneeId == currentUserId));
+                tasks = tasks.Where(t => t.AssigneeId == currentUserId);
+                scope = "Tasks assigned to you";
+                break;
+        }
+
+        var totalProjects = await projects.CountAsync();
         var totalTasks = await tasks.CountAsync();
         var completedTasks = await tasks.CountAsync(t => t.Status == TaskStatus.Completed);
         var pendingTasks = await tasks.CountAsync(t => t.Status != TaskStatus.Completed);
@@ -40,6 +61,7 @@ public class DashboardService : IDashboardService
 
         return new DashboardStatsDto
         {
+            Scope = scope,
             TotalProjects = totalProjects,
             TotalTasks = totalTasks,
             CompletedTasks = completedTasks,

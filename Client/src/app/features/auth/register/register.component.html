@@ -3,10 +3,14 @@
     <h2>Register</h2>
     <input formControlName="fullName" placeholder="Full name" />
     <input formControlName="email" placeholder="Email" type="email" />
-    <div class="hint" *ngIf="form.get('email')?.invalid && form.get('email')?.touched">Enter a valid email</div>
+    @if (form.get('email')?.invalid && form.get('email')?.touched) {
+      <div class="hint">Enter a valid email</div>
+    }
     <input formControlName="password" placeholder="Password" type="password" />
     <input formControlName="confirmPassword" placeholder="Confirm password" type="password" />
-    <div class="hint" *ngIf="form.errors?.['passwordsMismatch'] && form.get('confirmPassword')?.touched">Passwords do not match</div>
+    @if (form.errors?.['passwordsMismatch'] && form.get('confirmPassword')?.touched) {
+      <div class="hint">Passwords do not match</div>
+    }
     @if (error()) {
       <div class="error">{{ error() }}</div>
     }

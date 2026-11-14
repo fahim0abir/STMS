@@ -14,18 +14,23 @@ public class ProjectsController : ControllerBase
 {
     private readonly IProjectService _projectService;
     private readonly IValidator<ProjectQueryDto> _projectQueryValidator;
+    private readonly IValidator<ProjectManagerAssignDto> _projectManagerAssignValidator;
 
-    public ProjectsController(IProjectService projectService, IValidator<ProjectQueryDto> projectQueryValidator)
+    public ProjectsController(
+        IProjectService projectService,
+        IValidator<ProjectQueryDto> projectQueryValidator,
+        IValidator<ProjectManagerAssignDto> projectManagerAssignValidator)
     {
         _projectService = projectService;
         _projectQueryValidator = projectQueryValidator;
+        _projectManagerAssignValidator = projectManagerAssignValidator;
     }
 
     [HttpPost]
     [Authorize(Roles = "Admin,ProjectManager")]
     public async Task<ActionResult<ApiResponse<ProjectDto>>> CreateAsync([FromBody] ProjectCreateDto createDto)
     {
-        var project = await _projectService.CreateAsync(GetUserId(), createDto);
+        var project = await _projectService.CreateAsync(GetUserId(), GetUserRole(), createDto);
         return Ok(ApiResponse<ProjectDto>.Ok(project, "Project created."));
     }
 
@@ -58,6 +63,20 @@ public class ProjectsController : ControllerBase
     {
         await _projectService.UpdateAsync(id, createDto);
         return Ok(ApiResponse<ProjectDto>.Ok(null, "Project updated."));
+    }
+
+    [HttpPatch("{id:guid}/manager")]
+    [Authorize(Roles = "Admin")]
+    public async Task<ActionResult<ApiResponse<object>>> AssignManagerAsync(Guid id, [FromBody] ProjectManagerAssignDto assignDto)
+    {
+        var validationResult = await _projectManagerAssignValidator.ValidateAsync(assignDto);
+        if (!validationResult.IsValid)
+        {
+            return BadRequest(ApiResponse<object>.Error(string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage)), 400));
+        }
+
+        await _projectService.AssignManagerAsync(id, assignDto.ManagerId);
+        return Ok(ApiResponse<object>.Ok(null, "Project manager assigned."));
     }
 
     [HttpDelete("{id:guid}")]

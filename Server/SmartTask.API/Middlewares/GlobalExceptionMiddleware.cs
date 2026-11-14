@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using SmartTask.Infrastructure.Exceptions;
 
 namespace SmartTask.API.Middlewares;
 
@@ -32,9 +33,19 @@ public class GlobalExceptionMiddleware
     private static Task WriteErrorAsync(HttpContext context, Exception ex)
     {
         context.Response.ContentType = "application/json";
-        context.Response.StatusCode = 500;
+        context.Response.StatusCode = ResolveStatusCode(ex);
         var error = new { success = false, message = ex.Message };
         var json = JsonSerializer.Serialize(error);
         return context.Response.WriteAsync(json);
     }
+
+    private static int ResolveStatusCode(Exception ex) => ex switch
+    {
+        NotFoundException => StatusCodes.Status404NotFound,
+        ForbiddenException => StatusCodes.Status403Forbidden,
+        SecurityException => StatusCodes.Status401Unauthorized,
+        FluentValidationException => StatusCodes.Status400BadRequest,
+        InvalidOperationException => StatusCodes.Status400BadRequest,
+        _ => StatusCodes.Status500InternalServerError
+    };
 }

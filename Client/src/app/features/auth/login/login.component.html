@@ -2,9 +2,13 @@
   <form [formGroup]="form" (ngSubmit)="onSubmit()">
     <h2>Login</h2>
     <input formControlName="email" placeholder="Email" type="email" />
-    <div class="hint" *ngIf="form.get('email')?.invalid && form.get('email')?.touched">Enter a valid email</div>
+    @if (form.get('email')?.invalid && form.get('email')?.touched) {
+      <div class="hint">Enter a valid email</div>
+    }
     <input formControlName="password" placeholder="Password" type="password" />
-    <div class="hint" *ngIf="form.get('password')?.invalid && form.get('password')?.touched">Password is required</div>
+    @if (form.get('password')?.invalid && form.get('password')?.touched) {
+      <div class="hint">Password is required</div>
+    }
     @if (error()) {
       <div class="error">{{ error() }}</div>
     }

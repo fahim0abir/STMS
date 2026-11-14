@@ -1,9 +1,6 @@
 ﻿import { Component, Input } from '@angular/core';
 
-import { CommonModule } from '@angular/common';
-
 @Component({
-  imports: [CommonModule],
   selector: 'app-badge',
   standalone: true,
   template: `<span class="badge badge--{{ variant }}">{{ label }}</span>`,

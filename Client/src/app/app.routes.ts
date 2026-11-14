@@ -28,6 +28,16 @@ export const routes: Routes = [
         loadComponent: () => import('./features/tasks/tasks.component').then((m) => m.TasksComponent),
       },
       {
+        path: 'users',
+        loadComponent: () => import('./features/users/users.component').then((m) => m.UsersComponent),
+        canMatch: [roleGuard(['Admin'])],
+      },
+      {
+        path: 'profile',
+        loadComponent: () => import('./features/profile/profile.component').then((m) => m.ProfileComponent),
+      },
+
+      {
         path: 'unauthorized',
         loadComponent: () =>
           import('./shared/unauthorized/unauthorized.component').then((m) => m.UnauthorizedComponent),

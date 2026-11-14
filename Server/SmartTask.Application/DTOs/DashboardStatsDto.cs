@@ -2,6 +2,7 @@ namespace SmartTask.Application.DTOs;
 
 public class DashboardStatsDto
 {
+    public string Scope { get; set; } = string.Empty;
     public int TotalProjects { get; set; }
     public int TotalTasks { get; set; }
     public int CompletedTasks { get; set; }

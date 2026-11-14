@@ -5,12 +5,10 @@ import { ButtonComponent } from '../ui/button.component';
 import { BadgeComponent } from '../ui/badge.component';
 import { AuthService } from '../../core/auth/auth.service';
 
-import { CommonModule } from '@angular/common';
-
 @Component({
   selector: 'app-shell',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive, ButtonComponent, BadgeComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ButtonComponent, BadgeComponent],
   templateUrl: './shell.component.html',
   styleUrl: './shell.component.scss',
 })
@@ -24,6 +22,8 @@ export class ShellComponent {
     { path: '/dashboard', label: 'Dashboard', roles: ['Admin', 'ProjectManager', 'TeamMember'] },
     { path: '/projects', label: 'Projects', roles: ['Admin', 'ProjectManager'] },
     { path: '/tasks', label: 'Tasks', roles: ['Admin', 'ProjectManager', 'TeamMember'] },
+    { path: '/users', label: 'Users', roles: ['Admin'] },
+    { path: '/profile', label: 'Profile', roles: ['Admin', 'ProjectManager', 'TeamMember'] },
   ];
 
   toggleSidebar(): void {

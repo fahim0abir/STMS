@@ -26,7 +26,7 @@ public class ProjectsE2ETests
         var created = await ApiClient.ReadAsync<ProjectDto>(create);
         Assert.True(created.Success);
         Assert.Equal(name, created.Data!.Name);
-        Assert.Equal(TestData.ManagerEmail, created.Data.OwnerEmail);
+        Assert.Equal(TestData.ManagerEmail, created.Data.ManagerEmail);
 
         var managerList = await _fixture.Api.GetAsync($"/api/projects/paged?keyword={Uri.EscapeDataString(name)}", _fixture.Manager.AccessToken);
         var managerBody = await ApiClient.ReadAsync<PagedResult<ProjectDto>>(managerList);
@@ -80,6 +80,31 @@ public class ProjectsE2ETests
         var body = await ApiClient.ReadAsync<ProjectDto>(fetched);
         Assert.Equal(updatedName, body.Data!.Name);
         Assert.Equal("Updated by E2E", body.Data.Description);
+    }
+
+    [Fact]
+    public async Task AssignProjectManager_AsAdmin_ReassignsManager_AsManager_Returns403()
+    {
+        var create = await _fixture.Api.PostAsync("/api/projects", new { Name = $"Assignable {Guid.NewGuid():N}" }, _fixture.Admin.AccessToken);
+        var created = await ApiClient.ReadAsync<ProjectDto>(create);
+        var projectId = created.Data!.Id;
+
+        var managerAttempt = await _fixture.Api.PatchAsync(
+            $"/api/projects/{projectId}/manager",
+            new { ManagerId = TestData.SecondManagerId },
+            _fixture.Manager.AccessToken);
+        Assert.Equal(HttpStatusCode.Forbidden, managerAttempt.StatusCode);
+
+        var adminAssign = await _fixture.Api.PatchAsync(
+            $"/api/projects/{projectId}/manager",
+            new { ManagerId = TestData.SecondManagerId },
+            _fixture.Admin.AccessToken);
+        Assert.Equal(HttpStatusCode.OK, adminAssign.StatusCode);
+
+        var fetched = await _fixture.Api.GetAsync($"/api/projects/{projectId}", _fixture.Admin.AccessToken);
+        var body = await ApiClient.ReadAsync<ProjectDto>(fetched);
+        Assert.Equal(TestData.SecondManagerId, body.Data!.ManagerId);
+        Assert.Equal(TestData.SecondManagerEmail, body.Data.ManagerEmail);
     }
 
     [Fact]

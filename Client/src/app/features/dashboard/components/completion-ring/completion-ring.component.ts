@@ -1,9 +1,6 @@
 ﻿import { Component, Input } from '@angular/core';
 
-import { CommonModule } from '@angular/common';
-
 @Component({
-  imports: [CommonModule],
   selector: 'app-completion-ring',
   standalone: true,
   template: `

@@ -4,7 +4,9 @@
       <h1>Tasks</h1>
       <p>Track and manage task items</p>
     </div>
-    <app-btn *ngIf="canManage" variant="primary" (click)="openCreate()">New Task</app-btn>
+    @if (canManage) {
+      <app-btn variant="primary" (click)="openCreate()">New Task</app-btn>
+    }
   </div>
 
   <div class="tasks__filters">
@@ -50,26 +52,32 @@
     </div>
   </div>
 
-  <div *ngIf="loading()" class="tasks__state">
-    <app-spinner></app-spinner>
-    <span>Loading tasks…</span>
-  </div>
+  @if (loading()) {
+    <div class="tasks__state">
+      <app-spinner></app-spinner>
+      <span>Loading tasks…</span>
+    </div>
+  }
 
-  <div *ngIf="!loading() && error()" class="tasks__state tasks__state--error">
-    <span>{{ error() }}</span>
-    <app-btn size="sm" variant="outline" (click)="load()">Retry</app-btn>
-  </div>
+  @if (!loading() && error()) {
+    <div class="tasks__state tasks__state--error">
+      <span>{{ error() }}</span>
+      <app-btn size="sm" variant="outline" (click)="load()">Retry</app-btn>
+    </div>
+  }
 
-  <ng-container *ngIf="!loading() && !error()">
+  @if (!loading() && !error()) {
     <app-task-table
       [tasks]="tasks()"
       [canManage]="canManage"
       [canDelete]="canDelete"
+      [currentUserId]="currentUserId"
       [sortBy]="sortBy()"
       [sortOrder]="sortOrder()"
       (sortChange)="onSort($event)"
       (edit)="openEdit($event)"
       (delete)="remove($event)"
+      (statusChange)="onTaskStatusChange($event)"
     ></app-task-table>
 
     <div class="tasks__footer">
@@ -81,12 +89,13 @@
         (pageChange)="onPageChange($event)"
       ></app-pagination>
     </div>
-  </ng-container>
+  }
 
   <app-task-modal
     [open]="modalOpen()"
     [task]="editing()"
     [projects]="projects()"
+    [assignees]="assignees()"
     [saving]="saving()"
     [errorMessage]="modalError()"
     (close)="closeModal()"

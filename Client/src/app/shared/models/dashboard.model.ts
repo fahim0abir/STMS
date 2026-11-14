@@ -1,4 +1,5 @@
 export interface DashboardStats {
+  scope: string;
   totalProjects: number;
   totalTasks: number;
   completedTasks: number;

@@ -139,6 +139,7 @@ Optional AI overrides (defaults shown):
 - Migrations live in `Server/SmartTask.Infrastructure/Migrations`:
   - `InitialCreate` - schema for `Users`, `Projects`, `TaskItems`, `RefreshTokens`.
   - `AlignTaskStatusVocabulary` - data migration remapping legacy statuses to the assignment vocabulary.
+  - `AssignProjectManager` - renames `Projects.OwnerId` to `Projects.ManagerId` (assignment terminology).
 - Apply: automatic at startup (`Database:RunMigrationsOnStartup`, default `true`) with a bounded retry;
   manual alternative:
   `dotnet ef database update --project SmartTask.Infrastructure --startup-project SmartTask.API`.
@@ -159,14 +160,19 @@ All responses use the `ApiResponse<T>` envelope: `{ success, message, data, stat
 | Auth | `POST /api/auth/logout` | Revokes the refresh token |
 | Projects | `GET /api/projects/paged` | `keyword, sortBy, sortOrder, pageNumber, pageSize` |
 | Projects | `GET /api/projects/{id}` | Project details |
-| Projects | `POST /api/projects` | Admin / ProjectManager |
+| Projects | `POST /api/projects` | Admin / ProjectManager (Admin may pass `managerId`) |
 | Projects | `PUT /api/projects/{id}` | Admin / ProjectManager |
+| Projects | `PATCH /api/projects/{id}/manager` | Admin only - assigns the project manager |
 | Projects | `DELETE /api/projects/{id}` | Admin |
+| Users | `GET /api/users?role=` | Admin / ProjectManager - excludes Admin accounts and the caller |
+| Users | `POST /api/users` | Admin - creates ProjectManager/TeamMember accounts only |
+| Users | `PUT /api/users/me` | Any role - self profile (name, email, optional password change with `currentPassword` + matching `confirmPassword`) |
 | Tasks | `GET /api/taskitems/paged` | `keyword, status, priority, assigneeId, dueFrom, dueTo, sortBy, sortOrder, page` |
 | Tasks | `GET /api/taskitems/{id}` | Task details |
 | Tasks | `GET /api/taskitems?projectId=` | Tasks of one project |
 | Tasks | `POST /api/taskitems?projectId=` | Admin / ProjectManager |
-| Tasks | `PUT /api/taskitems/{id}` | Admin / ProjectManager |
+| Tasks | `PUT /api/taskitems/{id}` | Admin / ProjectManager (own projects only) |
+| Tasks | `PATCH /api/taskitems/{id}/assignee` | Admin / ProjectManager - assigns to a TeamMember, `null` unassigns |
 | Tasks | `PATCH /api/taskitems/{id}/status` | Assignee, Admin or ProjectManager |
 | Tasks | `DELETE /api/taskitems/{id}` | Admin |
 | Dashboard | `GET /api/dashboard/stats` | Totals, breakdowns, completion rate, upcoming due |
@@ -181,14 +187,21 @@ Swagger UI. The previous hand-maintained Postman collection was removed so the c
 | Capability | Admin | ProjectManager | TeamMember |
 | --- | --- | --- | --- |
 | Register / login / refresh / logout | Yes | Yes | Yes |
-| View projects & tasks | All | Owned projects | Assigned tasks |
-| Create / update projects | Yes | Yes | No |
+| View projects & tasks | All | Managed projects | Assigned tasks |
+| Create / update projects | Yes | Yes (self-managed) | No |
+| Assign project manager | Yes | No | No |
 | Delete projects | Yes | No | No |
-| Create / update / assign tasks | Yes | Yes | No |
+| Create / update / assign tasks | Yes | Managed projects -> TeamMember | No |
 | Delete tasks | Yes | No | No |
-| Update own task status | Yes | Yes | Yes |
-| Dashboard | Yes | Yes | Yes |
+| Update own task status | Yes | Yes | Yes (assigned tasks) |
+| Create users with role | Yes | No | No |
+| User picker (`/api/users`) | Yes (no Admins, no self) | Yes (no Admins, no self) | No |
+| Self profile update | Yes | Yes | Yes |
+| Dashboard | All data | Managed projects | Assigned tasks |
 | AI enhance description | Yes | Yes | Yes |
+
+Admin accounts are immutable from the user-management surface: they never appear in `/api/users`, cannot be
+assigned as project manager or task assignee, and cannot be created through `POST /api/users`.
 
 ## AI Feature
 

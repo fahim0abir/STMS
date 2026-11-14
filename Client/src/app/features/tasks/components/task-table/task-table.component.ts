@@ -9,40 +9,61 @@ import {
 import { BadgeComponent } from '../../../../shared/ui/badge.component';
 import { ButtonComponent } from '../../../../shared/ui/button.component';
 
-import { CommonModule } from '@angular/common';
-
 @Component({
   selector: 'app-task-table',
   standalone: true,
-  imports: [CommonModule, BadgeComponent, ButtonComponent],
+  imports: [BadgeComponent, ButtonComponent],
   template: `
     <div class="table-wrap">
       <table class="table">
         <thead>
           <tr>
             <th class="table__sortable" (click)="sortChange.emit('Title')">
-              Title <span *ngIf="sortBy === 'Title'">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
+              Title
+              @if (sortBy === 'Title') {
+                <span>{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
+              }
             </th>
             <th>Status</th>
             <th>Priority</th>
             <th>Assignee</th>
-            <th *ngIf="canManage" class="table__actions-head">Actions</th>
+            @if (canManage) {
+              <th class="table__actions-head">Actions</th>
+            }
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let task of tasks">
-            <td class="table__title">{{ task.title }}</td>
-            <td><app-badge [variant]="statusVariant(task)" [label]="statusLabel(task)"></app-badge></td>
-            <td><app-badge [variant]="priorityVariant(task)" [label]="priorityLabel(task)"></app-badge></td>
-            <td class="table__muted">{{ task.assigneeEmail || 'Unassigned' }}</td>
-            <td *ngIf="canManage" class="table__actions">
-              <app-btn size="sm" variant="outline" (click)="edit.emit(task)">Edit</app-btn>
-              <app-btn *ngIf="canDelete" size="sm" variant="danger" (click)="delete.emit(task)">Delete</app-btn>
-            </td>
-          </tr>
-          <tr *ngIf="!tasks.length">
-            <td [attr.colspan]="canManage ? 5 : 4" class="table__empty">No tasks found.</td>
-          </tr>
+          @for (task of tasks; track task.id) {
+            <tr>
+              <td class="table__title">{{ task.title }}</td>
+              <td>
+                @if (canUpdateStatus(task)) {
+                  <select class="table__status" (change)="onStatusChange(task, $event)">
+                    @for (option of statusOptions; track option.value) {
+                      <option [value]="option.value" [selected]="option.value === task.status">{{ option.label }}</option>
+                    }
+                  </select>
+                } @else {
+                  <app-badge [variant]="statusVariant(task)" [label]="statusLabel(task)"></app-badge>
+                }
+              </td>
+              <td><app-badge [variant]="priorityVariant(task)" [label]="priorityLabel(task)"></app-badge></td>
+              <td class="table__muted">{{ task.assigneeName || task.assigneeEmail || 'Unassigned' }}</td>
+              @if (canManage) {
+                <td class="table__actions">
+                  <app-btn size="sm" variant="outline" (click)="edit.emit(task)">Edit</app-btn>
+                  @if (canDelete) {
+                    <app-btn size="sm" variant="danger" (click)="delete.emit(task)">Delete</app-btn>
+                  }
+                </td>
+              }
+            </tr>
+          }
+          @if (!tasks.length) {
+            <tr>
+              <td [attr.colspan]="canManage ? 5 : 4" class="table__empty">No tasks found.</td>
+            </tr>
+          }
         </tbody>
       </table>
     </div>
@@ -67,6 +88,15 @@ import { CommonModule } from '@angular/common';
       .table__sortable { cursor: pointer; user-select: none; }
       .table__title { font-weight: 500; }
       .table__muted { color: #6b7280; }
+      .table__status {
+        border: 1px solid #d1d5db;
+        border-radius: 0.5rem;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.8125rem;
+        background: #fff;
+        color: #111827;
+        font-family: inherit;
+      }
       .table__actions { display: flex; gap: 0.5rem; }
       .table__empty { text-align: center; color: #9ca3af; padding: 2rem 1rem; }
     `,
@@ -76,12 +106,29 @@ export class TaskTableComponent {
   @Input() tasks: TaskItem[] = [];
   @Input() canManage = false;
   @Input() canDelete = false;
+  @Input() currentUserId = '';
   @Input() sortBy = 'CreatedAt';
   @Input() sortOrder: 'asc' | 'desc' = 'desc';
 
   @Output() sortChange = new EventEmitter<string>();
   @Output() edit = new EventEmitter<TaskItem>();
   @Output() delete = new EventEmitter<TaskItem>();
+  @Output() statusChange = new EventEmitter<{ task: TaskItem; status: TaskStatus }>();
+
+  readonly statusOptions = Object.entries(TASK_STATUS_LABELS).map(([value, label]) => ({
+    value: Number(value) as TaskStatus,
+    label,
+  }));
+
+  canUpdateStatus(task: TaskItem): boolean {
+    return this.canManage || (!!this.currentUserId && task.assigneeId === this.currentUserId);
+  }
+
+  onStatusChange(task: TaskItem, event: Event): void {
+    const value = Number((event.target as HTMLSelectElement).value) as TaskStatus;
+    if (value === task.status) return;
+    this.statusChange.emit({ task, status: value });
+  }
 
   statusLabel(task: TaskItem): string {
     return TASK_STATUS_LABELS[task.status];

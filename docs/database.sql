@@ -123,7 +123,7 @@ IF NOT EXISTS (
 )
 BEGIN
     INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
-    VALUES (N'20261113032907_InitialCreate', N'9.0.8');
+    VALUES (N'20261113032907_InitialCreate', N'9.0.10');
 END;
 
 IF NOT EXISTS (
@@ -148,7 +148,48 @@ IF NOT EXISTS (
 )
 BEGIN
     INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
-    VALUES (N'20261113135110_AlignTaskStatusVocabulary', N'9.0.8');
+    VALUES (N'20261113135110_AlignTaskStatusVocabulary', N'9.0.10');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261114115912_AssignProjectManager'
+)
+BEGIN
+    ALTER TABLE [Projects] DROP CONSTRAINT [FK_Projects_Users_OwnerId];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261114115912_AssignProjectManager'
+)
+BEGIN
+    EXEC sp_rename N'[Projects].[OwnerId]', N'ManagerId', 'COLUMN';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261114115912_AssignProjectManager'
+)
+BEGIN
+    EXEC sp_rename N'[Projects].[IX_Projects_OwnerId]', N'IX_Projects_ManagerId', 'INDEX';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261114115912_AssignProjectManager'
+)
+BEGIN
+    ALTER TABLE [Projects] ADD CONSTRAINT [FK_Projects_Users_ManagerId] FOREIGN KEY ([ManagerId]) REFERENCES [Users] ([Id]) ON DELETE CASCADE;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261114115912_AssignProjectManager'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261114115912_AssignProjectManager', N'9.0.10');
 END;
 
 COMMIT;

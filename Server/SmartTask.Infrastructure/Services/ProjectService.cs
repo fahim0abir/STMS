@@ -20,43 +20,81 @@ public class ProjectService : IProjectService
         _userRepository = userRepository;
     }
 
-    public async Task<ProjectDto> CreateAsync(Guid ownerId, ProjectCreateDto createDto)
+    public async Task<ProjectDto> CreateAsync(Guid currentUserId, string currentRole, ProjectCreateDto createDto)
     {
+        var role = Enum.Parse<Role>(currentRole, ignoreCase: true);
+        var managerId = currentUserId;
+
+        if (createDto.ManagerId.HasValue && createDto.ManagerId.Value != Guid.Empty)
+        {
+            var selectedManager = await _userRepository.GetByIdAsync(createDto.ManagerId.Value);
+            if (selectedManager == null)
+                throw new NotFoundException(nameof(User), createDto.ManagerId.Value);
+
+            if (selectedManager.Role != Role.ProjectManager)
+                throw new InvalidOperationException("The selected user must have the ProjectManager role.");
+
+            if (role != Role.Admin && selectedManager.Id != currentUserId)
+                throw new ForbiddenException("Only an administrator can assign a project to another manager.");
+
+            managerId = selectedManager.Id;
+        }
+
         var project = new Project
         {
             Id = Guid.NewGuid(),
             Name = createDto.Name,
             Description = createDto.Description,
-            OwnerId = ownerId,
+            ManagerId = managerId,
             CreatedAt = DateTime.UtcNow
         };
         await _projectRepository.AddAsync(project);
         await _projectRepository.SaveChangesAsync();
-        var owner = await _userRepository.GetByIdAsync(ownerId);
+        var manager = await _userRepository.GetByIdAsync(managerId);
         return new ProjectDto
         {
             Id = project.Id,
             Name = project.Name,
             Description = project.Description,
-            OwnerEmail = owner?.Email ?? string.Empty
+            ManagerId = project.ManagerId,
+            ManagerEmail = manager?.Email ?? string.Empty,
+            ManagerName = manager?.Name
         };
     }
 
     public async Task<ProjectDto?> GetByIdAsync(Guid id)
     {
-        var project = await _projectRepository.GetByIdAsync(id);
-        if (project == null) return null;
-        var owner = await _userRepository.GetByIdAsync(project.OwnerId);
-        return Map(project, owner?.Email ?? string.Empty);
+        var project = await _projectRepository.AsQueryable()
+            .Where(p => p.Id == id)
+            .Select(p => new ProjectDto
+            {
+                Id = p.Id,
+                Name = p.Name,
+                Description = p.Description,
+                ManagerId = p.ManagerId,
+                ManagerEmail = p.Manager.Email,
+                ManagerName = p.Manager.Name
+            })
+            .FirstOrDefaultAsync();
+        return project;
     }
 
-    public async Task<IEnumerable<ProjectDto>> GetByOwnerAsync(Guid ownerId)
+    public async Task<IEnumerable<ProjectDto>> GetByManagerAsync(Guid managerId)
     {
         var projects = await _projectRepository.AsQueryable()
-            .Where(p => p.OwnerId == ownerId)
+            .Where(p => p.ManagerId == managerId)
             .OrderBy(p => p.Name)
+            .Select(p => new ProjectDto
+            {
+                Id = p.Id,
+                Name = p.Name,
+                Description = p.Description,
+                ManagerId = p.ManagerId,
+                ManagerEmail = p.Manager.Email,
+                ManagerName = p.Manager.Name
+            })
             .ToListAsync();
-        return projects.Select(p => Map(p, string.Empty));
+        return projects;
     }
 
     public async Task<PagedResult<ProjectDto>> GetPagedAsync(ProjectQueryDto query, Guid currentUserId, string currentUserRole)
@@ -79,10 +117,30 @@ public class ProjectService : IProjectService
             Id = p.Id,
             Name = p.Name,
             Description = p.Description,
-            OwnerEmail = p.Owner.Email
+            ManagerId = p.ManagerId,
+            ManagerEmail = p.Manager.Email,
+            ManagerName = p.Manager.Name
         });
 
         return await dtoQuery.ToPagedResultAsync(query.PageNumber, query.PageSize);
+    }
+
+    public async Task AssignManagerAsync(Guid id, Guid managerId)
+    {
+        var project = await _projectRepository.GetByIdAsync(id);
+        if (project == null)
+            throw new NotFoundException(nameof(Project), id);
+
+        var manager = await _userRepository.GetByIdAsync(managerId);
+        if (manager == null)
+            throw new NotFoundException(nameof(User), managerId);
+
+        if (manager.Role != Role.ProjectManager)
+            throw new InvalidOperationException("The selected user must have the ProjectManager role.");
+
+        project.ManagerId = managerId;
+        project.UpdatedAt = DateTime.UtcNow;
+        await _projectRepository.SaveChangesAsync();
     }
 
     public async Task UpdateAsync(Guid id, ProjectCreateDto createDto)
@@ -105,12 +163,13 @@ public class ProjectService : IProjectService
         await _projectRepository.SaveChangesAsync();
     }
 
-    private static ProjectDto Map(Project p, string ownerEmail) => new()
+    private static ProjectDto Map(Project p, string managerEmail) => new()
     {
         Id = p.Id,
         Name = p.Name,
         Description = p.Description,
-        OwnerEmail = ownerEmail
+        ManagerId = p.ManagerId,
+        ManagerEmail = managerEmail
     };
 
     private static IQueryable<Project> ApplyRoleFilter(IQueryable<Project> q, Role role, Guid currentUserId)
@@ -118,7 +177,7 @@ public class ProjectService : IProjectService
         return role switch
         {
             Role.Admin => q,
-            _ => q.Where(p => p.OwnerId == currentUserId)
+            _ => q.Where(p => p.ManagerId == currentUserId)
         };
     }
 

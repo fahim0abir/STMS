@@ -14,7 +14,7 @@ public class DashboardServiceTests
         using var db = new TestDatabase();
         var service = new DashboardService(db.Projects, db.Tasks);
 
-        var stats = await service.GetStatsAsync();
+        var stats = await service.GetStatsAsync(Guid.NewGuid(), "Admin");
 
         Assert.Equal(0, stats.TotalProjects);
         Assert.Equal(0, stats.TotalTasks);
@@ -36,7 +36,7 @@ public class DashboardServiceTests
         db.AddTask(project.Id, "Todo", TaskStatus.ToDo, TaskPriority.Low);
         db.AddTask(project.Id, "Cancelled", TaskStatus.Cancelled, TaskPriority.Critical);
 
-        var stats = await new DashboardService(db.Projects, db.Tasks).GetStatsAsync();
+        var stats = await new DashboardService(db.Projects, db.Tasks).GetStatsAsync(owner.Id, "Admin");
 
         Assert.Equal(2, stats.TotalProjects);
         Assert.Equal(4, stats.TotalTasks);
@@ -59,8 +59,34 @@ public class DashboardServiceTests
         db.AddTask(project.Id, "Future but done", TaskStatus.Completed, dueAt: DateTime.UtcNow.AddDays(3));
         db.AddTask(project.Id, "No due date", TaskStatus.ToDo);
 
-        var stats = await new DashboardService(db.Projects, db.Tasks).GetStatsAsync();
+        var stats = await new DashboardService(db.Projects, db.Tasks).GetStatsAsync(owner.Id, "Admin");
 
         Assert.Equal(1, stats.UpcomingDueTasks);
+    }
+
+    [Fact]
+    public async Task GetStatsAsync_ScopesDataByRole()
+    {
+        using var db = new TestDatabase();
+        var manager = db.AddUser("pm@example.com", Role.ProjectManager);
+        var otherManager = db.AddUser("other@example.com", Role.ProjectManager);
+        var member = db.AddUser("dev@example.com", Role.TeamMember);
+        var managedProject = db.AddProject(manager.Id, "Managed");
+        var foreignProject = db.AddProject(otherManager.Id, "Foreign");
+        db.AddTask(managedProject.Id, "Mine", TaskStatus.ToDo, TaskPriority.High, member.Id);
+        db.AddTask(foreignProject.Id, "Other", TaskStatus.ToDo, TaskPriority.Low, member.Id);
+        var service = new DashboardService(db.Projects, db.Tasks);
+
+        var managerStats = await service.GetStatsAsync(manager.Id, "ProjectManager");
+        Assert.Equal(1, managerStats.TotalProjects);
+        Assert.Equal(1, managerStats.TotalTasks);
+
+        var memberStats = await service.GetStatsAsync(member.Id, "TeamMember");
+        Assert.Equal(2, memberStats.TotalProjects);
+        Assert.Equal(2, memberStats.TotalTasks);
+
+        var adminStats = await service.GetStatsAsync(Guid.NewGuid(), "Admin");
+        Assert.Equal(2, adminStats.TotalProjects);
+        Assert.Equal(2, adminStats.TotalTasks);
     }
 }

@@ -4,5 +4,5 @@ namespace SmartTask.Application.Interfaces;
 
 public interface IDashboardService
 {
-    Task<DashboardStatsDto> GetStatsAsync();
+    Task<DashboardStatsDto> GetStatsAsync(Guid currentUserId, string currentRole);
 }

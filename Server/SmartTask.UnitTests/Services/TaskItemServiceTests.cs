@@ -17,8 +17,9 @@ public class TaskItemServiceTests
     public async Task CreateAsync_PersistsTaskWithRequestedValues()
     {
         using var db = new TestDatabase();
-        var owner = db.AddUser();
-        var project = db.AddProject(owner.Id);
+        var manager = db.AddUser();
+        var member = db.AddUser("dev@example.com", Role.TeamMember);
+        var project = db.AddProject(manager.Id);
         var due = DateTime.UtcNow.AddDays(3);
 
         var dto = await CreateService(db).CreateAsync(project.Id, new TaskItemCreateDto
@@ -27,16 +28,29 @@ public class TaskItemServiceTests
             Description = "Release the feature",
             Status = TaskStatus.InProgress,
             Priority = TaskPriority.Critical,
-            AssigneeId = owner.Id,
+            AssigneeId = member.Id,
             DueAt = due
-        });
+        }, manager.Id, "ProjectManager");
 
         Assert.NotEqual(Guid.Empty, dto.Id);
         Assert.Equal(project.Id, dto.ProjectId);
         Assert.Equal(TaskStatus.InProgress, dto.Status);
         Assert.Equal(TaskPriority.Critical, dto.Priority);
         Assert.Equal(due, dto.DueAt);
+        Assert.Equal("dev@example.com", dto.AssigneeEmail);
         Assert.Single(db.Context.TaskItems);
+    }
+
+    [Fact]
+    public async Task CreateAsync_AsProjectManager_OnForeignProject_ThrowsForbidden()
+    {
+        using var db = new TestDatabase();
+        var manager = db.AddUser("pm@example.com", Role.ProjectManager);
+        var otherManager = db.AddUser("other@example.com", Role.ProjectManager);
+        var project = db.AddProject(otherManager.Id);
+
+        await Assert.ThrowsAsync<ForbiddenException>(() =>
+            CreateService(db).CreateAsync(project.Id, new TaskItemCreateDto { Title = "Nope" }, manager.Id, "ProjectManager"));
     }
 
     [Fact]
@@ -68,7 +82,7 @@ public class TaskItemServiceTests
         using var db = new TestDatabase();
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
-            CreateService(db).UpdateAsync(Guid.NewGuid(), new TaskItemCreateDto { Title = "Ghost" }));
+            CreateService(db).UpdateAsync(Guid.NewGuid(), new TaskItemCreateDto { Title = "Ghost" }, Guid.NewGuid(), "Admin"));
     }
 
     [Fact]
@@ -95,6 +109,66 @@ public class TaskItemServiceTests
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
             CreateService(db).UpdateStatusAsync(Guid.NewGuid(), TaskStatus.Completed));
+    }
+
+    [Fact]
+    public async Task AssignAsync_AsAdmin_AssignsTeamMember()
+    {
+        using var db = new TestDatabase();
+        var admin = db.AddUser("admin@example.com", Role.Admin);
+        var manager = db.AddUser("pm@example.com", Role.ProjectManager);
+        var member = db.AddUser("dev@example.com", Role.TeamMember);
+        var project = db.AddProject(manager.Id);
+        var task = db.AddTask(project.Id);
+
+        await CreateService(db).AssignAsync(task.Id, member.Id, admin.Id, "Admin");
+
+        var stored = await db.Context.TaskItems.FindAsync(task.Id);
+        Assert.Equal(member.Id, stored!.AssigneeId);
+    }
+
+    [Fact]
+    public async Task AssignAsync_AsProjectManager_OnForeignProject_ThrowsForbidden()
+    {
+        using var db = new TestDatabase();
+        var manager = db.AddUser("pm@example.com", Role.ProjectManager);
+        var otherManager = db.AddUser("other@example.com", Role.ProjectManager);
+        var member = db.AddUser("dev@example.com", Role.TeamMember);
+        var project = db.AddProject(otherManager.Id);
+        var task = db.AddTask(project.Id);
+
+        await Assert.ThrowsAsync<ForbiddenException>(() =>
+            CreateService(db).AssignAsync(task.Id, member.Id, manager.Id, "ProjectManager"));
+    }
+
+    [Fact]
+    public async Task AssignAsync_ToNonTeamMember_ThrowsInvalidOperation()
+    {
+        using var db = new TestDatabase();
+        var admin = db.AddUser("admin@example.com", Role.Admin);
+        var manager = db.AddUser("pm@example.com", Role.ProjectManager);
+        var project = db.AddProject(manager.Id);
+        var task = db.AddTask(project.Id);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            CreateService(db).AssignAsync(task.Id, manager.Id, admin.Id, "Admin"));
+    }
+
+    [Fact]
+    public async Task AssignAsync_WithNull_UnassignsTask()
+    {
+        using var db = new TestDatabase();
+        var admin = db.AddUser("admin@example.com", Role.Admin);
+        var manager = db.AddUser("pm@example.com", Role.ProjectManager);
+        var member = db.AddUser("dev@example.com", Role.TeamMember);
+        var project = db.AddProject(manager.Id);
+        var task = db.AddTask(project.Id, assigneeId: member.Id);
+        var service = CreateService(db);
+
+        await service.AssignAsync(task.Id, null, admin.Id, "Admin");
+
+        var stored = await db.Context.TaskItems.FindAsync(task.Id);
+        Assert.Null(stored!.AssigneeId);
     }
 
     [Fact]

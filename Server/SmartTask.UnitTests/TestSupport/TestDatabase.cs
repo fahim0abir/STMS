@@ -48,14 +48,14 @@ internal sealed class TestDatabase : IDisposable
         return user;
     }
 
-    public Project AddProject(Guid ownerId, string name = "Project", string? description = null, DateTime? createdAt = null)
+    public Project AddProject(Guid managerId, string name = "Project", string? description = null, DateTime? createdAt = null)
     {
         var project = new Project
         {
             Id = Guid.NewGuid(),
             Name = name,
             Description = description,
-            OwnerId = ownerId,
+            ManagerId = managerId,
             CreatedAt = createdAt ?? DateTime.UtcNow
         };
         Context.Projects.Add(project);

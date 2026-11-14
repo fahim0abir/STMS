@@ -35,6 +35,11 @@ export class TokenService {
       return null;
     }
   }
+  setUser(user: User): void {
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+  }
+
+
 
   removeToken(): void {
     localStorage.removeItem(TOKEN_KEY);

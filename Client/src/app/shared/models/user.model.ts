@@ -1,10 +1,25 @@
-import { toRoleName } from './enums';
+import { Role, toRoleName } from './enums';
 
 export interface User {
   id: string;
   email: string;
   name?: string | null;
   role: string;
+}
+
+export interface CreateUserRequest {
+  email: string;
+  password: string;
+  name?: string | null;
+  role: Role;
+}
+
+export interface UpdateProfileRequest {
+  email: string;
+  name?: string | null;
+  currentPassword?: string | null;
+  newPassword?: string | null;
+  confirmPassword?: string | null;
 }
 
 export interface AuthResult {

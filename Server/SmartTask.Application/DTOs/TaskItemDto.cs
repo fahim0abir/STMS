@@ -13,6 +13,7 @@ public record TaskItemDto
     public TaskPriority Priority { get; init; }
     public Guid? AssigneeId { get; init; }
     public string? AssigneeEmail { get; init; }
+    public string? AssigneeName { get; init; }
     public DateTime? DueAt { get; init; }
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }

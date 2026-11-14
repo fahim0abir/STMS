@@ -6,29 +6,32 @@ export interface BreakdownRow {
   color?: string;
 }
 
-import { CommonModule } from '@angular/common';
-
 @Component({
-  imports: [CommonModule],
   selector: 'app-stat-breakdown',
   standalone: true,
   template: `
     <div class="breakdown">
       <h3 class="breakdown__title">{{ title }}</h3>
-      <p *ngIf="!rows.length" class="breakdown__empty">No data yet.</p>
-      <ul *ngIf="rows.length" class="breakdown__list">
-        <li *ngFor="let row of rows" class="breakdown__row">
-          <span class="breakdown__label">{{ row.label }}</span>
-          <span class="breakdown__bar">
-            <span
-              class="breakdown__fill"
-              [style.width.%]="percent(row.value)"
-              [style.background]="row.color || '#2563eb'"
-            ></span>
-          </span>
-          <span class="breakdown__value">{{ row.value }}</span>
-        </li>
-      </ul>
+      @if (!rows.length) {
+        <p class="breakdown__empty">No data yet.</p>
+      }
+      @if (rows.length) {
+        <ul class="breakdown__list">
+          @for (row of rows; track row.label) {
+            <li class="breakdown__row">
+              <span class="breakdown__label">{{ row.label }}</span>
+              <span class="breakdown__bar">
+                <span
+                  class="breakdown__fill"
+                  [style.width.%]="percent(row.value)"
+                  [style.background]="row.color || '#2563eb'"
+                ></span>
+              </span>
+              <span class="breakdown__value">{{ row.value }}</span>
+            </li>
+          }
+        </ul>
+      }
     </div>
   `,
   styles: [

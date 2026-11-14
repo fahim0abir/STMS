@@ -18,7 +18,7 @@ import { ButtonComponent } from '../../../../shared/ui/button.component';
               }
             </th>
             <th>Description</th>
-            <th>Owner</th>
+            <th>Manager</th>
             @if (canManage) {
               <th class="table__actions-head">Actions</th>
             }
@@ -29,7 +29,7 @@ import { ButtonComponent } from '../../../../shared/ui/button.component';
             <tr>
               <td class="table__name">{{ project.name }}</td>
               <td class="table__muted">{{ project.description || '—' }}</td>
-              <td class="table__muted">{{ project.ownerEmail }}</td>
+              <td class="table__muted">{{ project.managerName || project.managerEmail || 'Unassigned' }}</td>
               @if (canManage) {
                 <td class="table__actions">
                   <app-btn size="sm" variant="outline" (click)="edit.emit(project)">Edit</app-btn>

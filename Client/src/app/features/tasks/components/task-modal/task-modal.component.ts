@@ -12,6 +12,7 @@
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Project } from '../../../../shared/models/project.model';
+import { User } from '../../../../shared/models/user.model';
 import { TaskItem, TaskItemUpsert } from '../../../../shared/models/task.model';
 import { TASK_PRIORITY_LABELS, TASK_STATUS_LABELS, TaskPriority, TaskStatus } from '../../../../shared/models/enums';
 import { AiEnhanceResult, AiService, AI_MAX_LENGTH } from '../../../../core/services/ai.service';
@@ -22,12 +23,10 @@ export interface TaskModalSaveEvent {
   projectId?: string;
 }
 
-import { CommonModule } from '@angular/common';
-
 @Component({
   selector: 'app-task-modal',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, ButtonComponent],
+  imports: [ReactiveFormsModule, ButtonComponent],
   templateUrl: './task-modal.component.html',
   styleUrl: './task-modal.component.scss',
 })
@@ -39,6 +38,7 @@ export class TaskModalComponent implements OnChanges {
   @Input() open = false;
   @Input() task: TaskItem | null = null;
   @Input() projects: Project[] = [];
+  @Input() assignees: User[] = [];
   @Input() saving = false;
   @Input() errorMessage = '';
 
@@ -71,6 +71,7 @@ export class TaskModalComponent implements OnChanges {
     description: ['', [Validators.maxLength(AI_MAX_LENGTH)]],
     status: [TaskStatus.ToDo as TaskStatus, [Validators.required]],
     priority: [TaskPriority.Medium as TaskPriority, [Validators.required]],
+    assigneeId: [''],
     dueAt: [''],
   });
 
@@ -87,6 +88,7 @@ export class TaskModalComponent implements OnChanges {
         description: this.task?.description ?? '',
         status: this.task?.status ?? TaskStatus.ToDo,
         priority: this.task?.priority ?? TaskPriority.Medium,
+        assigneeId: this.task?.assigneeId ?? '',
         dueAt: this.toDateInput(this.task?.dueAt),
       });
     }
@@ -175,6 +177,7 @@ export class TaskModalComponent implements OnChanges {
       description: raw.description?.trim() || null,
       status: Number(raw.status) as TaskStatus,
       priority: Number(raw.priority) as TaskPriority,
+      assigneeId: raw.assigneeId || null,
       dueAt: raw.dueAt ? new Date(raw.dueAt).toISOString() : null,
     };
 
