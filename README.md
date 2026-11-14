@@ -125,7 +125,10 @@ Optional AI overrides (defaults shown):
 
 | Key | Default | Purpose |
 | --- | --- | --- |
-| `AI:GitHubModels:Endpoint` | `https://models.inference.ai.azure.com/chat/completions` | Chat-completions endpoint |
+| `AI:GoogleAIStudio:ApiKey` | - | Google AI Studio key (preferred provider; GitHub Models was retired 30 Jul 2026) |
+| `AI:GoogleAIStudio:Endpoint` | `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions` | OpenAI-compatible Gemini endpoint |
+| `AI:GoogleAIStudio:Model` | `gemini-2.0-flash` | Gemini model name |
+| `AI:GitHubModels:Endpoint` | `https://models.github.ai/inference/chat/completions` | Chat-completions endpoint |
 | `AI:GitHubModels:Model` | `gpt-4o-mini` | Model name |
 | `AI:GitHubModels:Temperature` | `0.4` | Determinism (0-1) |
 

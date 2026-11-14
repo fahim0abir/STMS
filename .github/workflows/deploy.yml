@@ -94,4 +94,4 @@ jobs:
         shell: powershell
         run: |
           Remove-Item -Recurse -Force C:/inetpub/STMS.Client/*
-          Copy-Item -Recurse -Force ./Client/dist/smart-task-ui/browser C:/inetpub/STMS.Client/
+          Copy-Item -Recurse -Force ./Client/dist/smart-task-ui/browser/* C:/inetpub/STMS.Client/
