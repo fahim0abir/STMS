@@ -14,7 +14,12 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Project } from '../../../../shared/models/project.model';
 import { User } from '../../../../shared/models/user.model';
 import { TaskItem, TaskItemUpsert } from '../../../../shared/models/task.model';
-import { TASK_PRIORITY_LABELS, TASK_STATUS_LABELS, TaskPriority, TaskStatus } from '../../../../shared/models/enums';
+import {
+  TASK_PRIORITY_LABELS,
+  TASK_STATUS_LABELS,
+  TaskPriority,
+  TaskStatus,
+} from '../../../../shared/models/enums';
 import { AiEnhanceResult, AiService, AI_MAX_LENGTH } from '../../../../core/services/ai.service';
 import { ButtonComponent } from '../../../../shared/ui/button.component';
 
@@ -202,4 +207,3 @@ export class TaskModalComponent implements OnChanges {
     this.descriptionBeforeAccept = null;
   }
 }
-

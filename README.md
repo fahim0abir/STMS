@@ -41,7 +41,7 @@ and an AI endpoint that rewrites rough task notes into structured, actionable ta
 | Data | EF Core 9 code-first migrations, SQL Server (LocalDB or full instance) |
 | Security | JWT bearer + refresh tokens, BCrypt, role-based policies, FluentValidation, rate limiting |
 | Observability | Serilog console + rolling file logs, `AddHealthChecks()` with DbContext check |
-| AI | GitHub Models chat completions (`gpt-4o-mini`) over `HttpClient`, JSON-mode output |
+| AI | Google AI Studio (`gemini-3.1-flash-lite`) through the official `Google.GenAI` SDK, JSON output |
 | Frontend | Angular (standalone components), TypeScript, SCSS, RxJS, typed reactive forms |
 | Docs | Swagger / OpenAPI, PROMPTS.md, idempotent SQL script |
 
@@ -118,19 +118,19 @@ Never commit real secrets. `Server/SmartTask.API/appsettings.json` holds non-sec
 ```bash
 cd Server/SmartTask.API
 dotnet user-secrets set "Jwt:Key" "<random 32+ character key>"
-dotnet user-secrets set "AI:GitHubModels:ApiKey" "<github models PAT>"
+dotnet user-secrets set "AI:GoogleAIStudio:ApiKey" "<google ai studio key>"
 ```
 
 Optional AI overrides (defaults shown):
 
 | Key | Default | Purpose |
 | --- | --- | --- |
-| `AI:GoogleAIStudio:ApiKey` | - | Google AI Studio key (preferred provider; GitHub Models was retired 30 Jul 2026) |
-| `AI:GoogleAIStudio:Endpoint` | `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions` | OpenAI-compatible Gemini endpoint |
-| `AI:GoogleAIStudio:Model` | `gemini-2.0-flash` | Gemini model name |
-| `AI:GitHubModels:Endpoint` | `https://models.github.ai/inference/chat/completions` | Chat-completions endpoint |
-| `AI:GitHubModels:Model` | `gpt-4o-mini` | Model name |
-| `AI:GitHubModels:Temperature` | `0.4` | Determinism (0-1) |
+| `AI:GoogleAIStudio:ApiKey` | - | Google AI Studio key (called through the official `Google.GenAI` SDK) |
+| `AI:GoogleAIStudio:Model` | `gemini-3.1-flash-lite` | Gemini model name |
+| `AI:GoogleAIStudio:Temperature` | `0.4` | Determinism (0-1) |
+
+When the key is absent the enhancement endpoint answers with the deterministic local fallback
+(`usedFallback: true`), so the API stays usable without outbound AI access.
 
 `appsettings.Example.json` documents the full key layout without values.
 
@@ -255,7 +255,7 @@ cd Server
 dotnet test SmartTask.E2ETests\SmartTask.E2ETests.csproj
 ```
 
-Covers auth (register/login/refresh/logout), RBAC (401/403), project and task CRUD with paging/filtering, dashboard aggregates, health probe and the AI enhancement endpoint (deterministic fallback when no `AI:GitHubModels:ApiKey` is configured).
+Covers auth (register/login/refresh/logout), RBAC (401/403), project and task CRUD with paging/filtering, dashboard aggregates, health probe and the AI enhancement endpoint (deterministic fallback when no `AI:GoogleAIStudio:ApiKey` is configured).
 
 ### Frontend end-to-end (Playwright)
 

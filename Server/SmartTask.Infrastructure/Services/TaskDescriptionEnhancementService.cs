@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
@@ -7,20 +6,20 @@ using Microsoft.Extensions.Logging;
 using SmartTask.Application.DTOs;
 using SmartTask.Application.Interfaces;
 using SmartTask.Domain.Enums;
+using Google.GenAI;
+using Google.GenAI.Types;
 
 namespace SmartTask.Infrastructure.Services;
 
 /// <summary>
-/// Rewrites rough task notes into a structured, production-ready task definition using a free
-/// GitHub Models chat-completions endpoint, with a deterministic fallback when the model is unavailable.
+/// Rewrites rough task notes into a structured, production-ready task definition using Google AI Studio
+/// (Gemini) through the official Google.GenAI SDK, with a deterministic fallback when the model is unavailable.
 /// </summary>
 public class TaskDescriptionEnhancementService : ITaskDescriptionEnhancementService
 {
-    private const string DefaultEndpoint = "https://models.github.ai/inference/chat/completions";
-    private const string DefaultModel = "gpt-4o-mini";
-    private const string DefaultGoogleEndpoint = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-    private const string DefaultGoogleModel = "gemini-2.0-flash";
+    private const string DefaultModel = "gemini-3.1-flash-lite";
     private const string PlaceholderPrefix = "REPLACE_WITH";
+    private static readonly TimeSpan ProviderTimeout = TimeSpan.FromSeconds(20);
     private const int MaxAttempts = 2;
     private const int MaxListItems = 8;
     private const int MaxDescriptionLength = 1200;
@@ -51,9 +50,8 @@ public class TaskDescriptionEnhancementService : ITaskDescriptionEnhancementServ
         - Never invent external systems, credentials, or requirements that are not implied by the input.
         """;
 
-    private readonly HttpClient _httpClient;
+    private readonly Client? _client;
     private readonly ILogger<TaskDescriptionEnhancementService> _logger;
-    private readonly string? _apiKey;
     private readonly bool _isConfigured;
     private readonly string _model;
     private readonly double _temperature;
@@ -62,39 +60,30 @@ public class TaskDescriptionEnhancementService : ITaskDescriptionEnhancementServ
     {
         _logger = logger;
 
-        // GitHub Models was retired on 30 July 2026, so Google AI Studio (OpenAI-compatible endpoint)
-        // takes precedence whenever its key is configured; otherwise the configured GitHub Models values are used.
-        var provider = ResolveProvider(configuration, out var apiKey, out var endpoint, out var modelName);
-        _apiKey = apiKey;
-        _isConfigured = !string.IsNullOrWhiteSpace(_apiKey) && !_apiKey.StartsWith(PlaceholderPrefix, StringComparison.OrdinalIgnoreCase);
-        _model = modelName;
-        _temperature = double.TryParse(configuration[$"AI:{provider}:Temperature"], NumberStyles.Float, CultureInfo.InvariantCulture, out var temperature)
+        // Google AI Studio keys live in user-secrets. A missing or placeholder key disables the provider
+        // entirely so the deterministic fallback is used without a network round-trip.
+        var apiKey = configuration["AI:GoogleAIStudio:ApiKey"];
+        _isConfigured = !string.IsNullOrWhiteSpace(apiKey)
+            && !apiKey.StartsWith(PlaceholderPrefix, StringComparison.OrdinalIgnoreCase);
+        _model = configuration["AI:GoogleAIStudio:Model"] is { Length: > 0 } model ? model : DefaultModel;
+        _temperature = double.TryParse(configuration["AI:GoogleAIStudio:Temperature"], NumberStyles.Float, CultureInfo.InvariantCulture, out var temperature)
             ? Math.Clamp(temperature, 0, 1)
             : 0.4;
 
-        _httpClient = new HttpClient
+        if (!_isConfigured)
         {
-            BaseAddress = new Uri(endpoint),
-            Timeout = TimeSpan.FromSeconds(20)
-        };
-        _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-    }
-
-    private static string ResolveProvider(IConfiguration configuration, out string? apiKey, out string endpoint, out string model)
-    {
-        var googleKey = configuration["AI:GoogleAIStudio:ApiKey"];
-        if (!string.IsNullOrWhiteSpace(googleKey) && !googleKey.StartsWith(PlaceholderPrefix, StringComparison.OrdinalIgnoreCase))
-        {
-            apiKey = googleKey;
-            endpoint = configuration["AI:GoogleAIStudio:Endpoint"] is { Length: > 0 } googleEndpoint ? googleEndpoint : DefaultGoogleEndpoint;
-            model = configuration["AI:GoogleAIStudio:Model"] is { Length: > 0 } googleModel ? googleModel : DefaultGoogleModel;
-            return "GoogleAIStudio";
+            return;
         }
 
-        apiKey = configuration["AI:GitHubModels:ApiKey"];
-        endpoint = configuration["AI:GitHubModels:Endpoint"] is { Length: > 0 } configured ? configured : DefaultEndpoint;
-        model = configuration["AI:GitHubModels:Model"] is { Length: > 0 } githubModel ? githubModel : DefaultModel;
-        return "GitHubModels";
+        try
+        {
+            _client = new Client(apiKey: apiKey);
+        }
+        catch (Exception exception)
+        {
+            _isConfigured = false;
+            _logger.LogWarning(exception, "Google AI Studio client could not be created; returning the deterministic fallback.");
+        }
     }
 
     public async Task<EnhanceDescriptionResponseDto> EnhanceAsync(EnhanceDescriptionRequestDto request, CancellationToken cancellationToken = default)
@@ -117,7 +106,7 @@ public class TaskDescriptionEnhancementService : ITaskDescriptionEnhancementServ
         {
             try
             {
-                var raw = await CallModelAsync(userContent, useJsonMode: attempt == 1, cancellationToken);
+                var raw = await CallModelAsync(userContent, cancellationToken);
                 var parsed = TryParse(raw);
                 if (parsed is not null)
                 {
@@ -171,38 +160,35 @@ public class TaskDescriptionEnhancementService : ITaskDescriptionEnhancementServ
         return builder.ToString();
     }
 
-    private async Task<string> CallModelAsync(string userContent, bool useJsonMode, CancellationToken cancellationToken)
+    private async Task<string> CallModelAsync(string userContent, CancellationToken cancellationToken)
     {
-        var payload = new Dictionary<string, object?>
+        var config = new GenerateContentConfig
         {
-            ["model"] = _model,
-            ["messages"] = new[]
+            SystemInstruction = new Content
             {
-                new { role = "system", content = SystemPrompt },
-                new { role = "user", content = userContent }
+                Parts = new List<Part> { new() { Text = SystemPrompt } }
             },
-            ["temperature"] = _temperature,
-            ["max_tokens"] = 900
+            Temperature = (float)_temperature,
+            MaxOutputTokens = 900,
+            ResponseMimeType = "application/json"
         };
 
-        if (useJsonMode)
+        using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutSource.CancelAfter(ProviderTimeout);
+
+        var response = await _client!.Models.GenerateContentAsync(
+            model: _model,
+            contents: userContent,
+            config: config,
+            cancellationToken: timeoutSource.Token);
+
+        var text = response.Text;
+        if (string.IsNullOrWhiteSpace(text))
         {
-            payload["response_format"] = new { type = "json_object" };
+            throw new InvalidOperationException("The AI provider returned an empty completion.");
         }
 
-        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, string.Empty)
-        {
-            Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json")
-        };
-        httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
-
-        using var response = await _httpClient.SendAsync(httpRequest, cancellationToken);
-        if (!response.IsSuccessStatusCode)
-        {
-            throw new HttpRequestException($"AI provider returned {(int)response.StatusCode}: {Truncate(await response.Content.ReadAsStringAsync(cancellationToken), 200)}");
-        }
-
-        return await response.Content.ReadAsStringAsync(cancellationToken);
+        return text;
     }
 
     private EnhanceDescriptionResponseDto? TryParse(string rawResponse)
@@ -214,23 +200,7 @@ public class TaskDescriptionEnhancementService : ITaskDescriptionEnhancementServ
         }
 
         using var document = JsonDocument.Parse(json);
-        var generated = document.RootElement;
-
-        // Some providers wrap the payload inside the chat-completions envelope.
-        if (generated.TryGetProperty("choices", out var choices) && choices.ValueKind == JsonValueKind.Array && choices.GetArrayLength() > 0)
-        {
-            var content = choices[0].GetProperty("message").GetProperty("content").GetString();
-            var inner = ExtractJsonObject(content ?? string.Empty);
-            if (inner is null)
-            {
-                return null;
-            }
-
-            using var innerDocument = JsonDocument.Parse(inner);
-            return Map(innerDocument.RootElement);
-        }
-
-        return Map(generated);
+        return Map(document.RootElement);
     }
 
     private EnhanceDescriptionResponseDto? Map(JsonElement root)
@@ -284,7 +254,7 @@ public class TaskDescriptionEnhancementService : ITaskDescriptionEnhancementServ
 
         return new EnhanceDescriptionResponseDto
         {
-            EnhancedDescription = Truncate(string.Join(Environment.NewLine, body), MaxDescriptionLength),
+            EnhancedDescription = Truncate(string.Join(System.Environment.NewLine, body), MaxDescriptionLength),
             SuggestedTitle = title,
             AcceptanceCriteria = criteria,
             Subtasks = subtasks,

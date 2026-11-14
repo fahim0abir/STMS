@@ -3,8 +3,8 @@
 ## 1. Purpose
 
 `POST /api/tasks/enhance-description` converts a rough, informal task note into a **structured, actionable task
-definition** that a team can execute without follow-up questions. The model is `gpt-4o-mini` via GitHub Models
-(free tier); the endpoint degrades gracefully to a deterministic local fallback.
+definition** that a team can execute without follow-up questions. The model is `gemini-3.1-flash-lite` via Google AI
+Studio, called through the official `Google.GenAI` SDK; the endpoint degrades gracefully to a deterministic local fallback.
 
 ## 2. Prompt Design
 
@@ -112,14 +112,14 @@ applies the description, fills an empty title and sets the priority.
 
 **Resilience:**
 
-- 20s HTTP timeout, two attempts (second attempt without `response_format`), then the deterministic fallback.
+- 20s provider timeout (linked `CancellationTokenSource`), two attempts, then the deterministic fallback.
 - Fallback output is derived only from the user's own text (sentence split, title = first 12 words, keyword-based priority),
   so it never fabricates external systems.
 - Timeouts caused by client disconnects surface as HTTP 504; rate-limit breaches as 429.
 
 **Secrets & data handling:**
 
-- API key is read from user-secrets (`AI:GitHubModels:ApiKey`), never from source control.
+- API key is read from user-secrets (`AI:GoogleAIStudio:ApiKey`), never from source control.
 - Only the task description, title and project context are sent - no user identifiers, tokens or PII.
 - Prompt-injection mitigation: the system prompt pins the output schema and forbids extra prose; anything outside the
   schema is dropped during parsing, and the model output is never executed or interpolated into SQL.
