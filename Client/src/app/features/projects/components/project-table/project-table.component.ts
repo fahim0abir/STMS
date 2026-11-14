@@ -2,38 +2,47 @@
 import { Project } from '../../../../shared/models/project.model';
 import { ButtonComponent } from '../../../../shared/ui/button.component';
 
-import { CommonModule } from '@angular/common';
-
 @Component({
   selector: 'app-project-table',
   standalone: true,
-  imports: [CommonModule, ButtonComponent],
+  imports: [ButtonComponent],
   template: `
     <div class="table-wrap">
       <table class="table">
         <thead>
           <tr>
             <th class="table__sortable" (click)="sort('Name')">
-              Name <span *ngIf="sortBy === 'Name'">{{ sortOrder === 'asc' ? 'â†‘' : 'â†“' }}</span>
+              Name
+              @if (sortBy === 'Name') {
+                <span>{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
+              }
             </th>
             <th>Description</th>
             <th>Owner</th>
-            <th *ngIf="canManage" class="table__actions-head">Actions</th>
+            @if (canManage) {
+              <th class="table__actions-head">Actions</th>
+            }
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let project of projects">
-            <td class="table__name">{{ project.name }}</td>
-            <td class="table__muted">{{ project.description || 'â€”' }}</td>
-            <td class="table__muted">{{ project.ownerEmail }}</td>
-            <td *ngIf="canManage" class="table__actions">
-              <app-btn size="sm" variant="outline" (click)="edit.emit(project)">Edit</app-btn>
-              <app-btn size="sm" variant="danger" (click)="delete.emit(project)">Delete</app-btn>
-            </td>
-          </tr>
-          <tr *ngIf="!projects.length">
-            <td [attr.colspan]="canManage ? 4 : 3" class="table__empty">No projects found.</td>
-          </tr>
+          @for (project of projects; track project.id) {
+            <tr>
+              <td class="table__name">{{ project.name }}</td>
+              <td class="table__muted">{{ project.description || '—' }}</td>
+              <td class="table__muted">{{ project.ownerEmail }}</td>
+              @if (canManage) {
+                <td class="table__actions">
+                  <app-btn size="sm" variant="outline" (click)="edit.emit(project)">Edit</app-btn>
+                  <app-btn size="sm" variant="danger" (click)="delete.emit(project)">Delete</app-btn>
+                </td>
+              }
+            </tr>
+          }
+          @if (!projects.length) {
+            <tr>
+              <td [attr.colspan]="canManage ? 4 : 3" class="table__empty">No projects found.</td>
+            </tr>
+          }
         </tbody>
       </table>
     </div>

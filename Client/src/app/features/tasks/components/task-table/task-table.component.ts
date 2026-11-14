@@ -21,7 +21,7 @@ import { CommonModule } from '@angular/common';
         <thead>
           <tr>
             <th class="table__sortable" (click)="sortChange.emit('Title')">
-              Title <span *ngIf="sortBy === 'Title'">{{ sortOrder === 'asc' ? 'â†‘' : 'â†“' }}</span>
+              Title <span *ngIf="sortBy === 'Title'">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
             </th>
             <th>Status</th>
             <th>Priority</th>

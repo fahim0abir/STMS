@@ -25,7 +25,7 @@ import { CommonModule } from '@angular/common';
           <option *ngFor="let option of sortOptions" [value]="option.value">{{ option.label }}</option>
         </select>
         <button class="toolbar__order" type="button" (click)="toggleOrder()">
-          {{ sortOrder === 'asc' ? 'ASC â†‘' : 'DESC â†“' }}
+          {{ sortOrder === 'asc' ? 'ASC ↑' : 'DESC ↓' }}
         </button>
         <ng-content></ng-content>
       </div>
@@ -59,7 +59,7 @@ import { CommonModule } from '@angular/common';
   ],
 })
 export class SearchSortBarComponent {
-  @Input() searchPlaceholder = 'Searchâ€¦';
+  @Input() searchPlaceholder = 'Search…';
   @Input() searchValue = '';
   @Input() sortBy = '';
   @Input() sortOrder: 'asc' | 'desc' = 'asc';

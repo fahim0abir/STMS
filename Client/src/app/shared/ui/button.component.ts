@@ -1,4 +1,4 @@
-﻿import { Component, Input, Output, EventEmitter } from '@angular/core';
+﻿import { Component, Input } from '@angular/core';
 
 import { CommonModule } from '@angular/common';
 
@@ -11,7 +11,6 @@ import { CommonModule } from '@angular/common';
       type="button"
       [class]="btnClass"
       [disabled]="disabled || loading"
-      (click)="handleClick($event)"
     >
       <span *ngIf="loading" class="btn__spinner"></span>
       <ng-content></ng-content>
@@ -58,15 +57,8 @@ export class ButtonComponent {
   @Input() size: 'sm' | 'md' | 'lg' = 'md';
   @Input() disabled = false;
   @Input() loading = false;
-  @Output() click = new EventEmitter<MouseEvent>();
 
   get btnClass(): string {
     return `btn btn-${this.variant} btn-${this.size}`;
-  }
-
-  handleClick(event: MouseEvent): void {
-    if (!this.disabled && !this.loading) {
-      this.click.emit(event);
-    }
   }
 }

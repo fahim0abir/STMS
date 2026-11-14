@@ -11,12 +11,10 @@ import { SpinnerComponent } from '../../shared/ui/spinner.component';
 import { ProjectTableComponent } from './components/project-table/project-table.component';
 import { ProjectModalComponent } from './components/project-modal/project-modal.component';
 
-import { CommonModule } from '@angular/common';
-
 @Component({
   selector: 'app-projects',
   standalone: true,
-  imports: [CommonModule, 
+  imports: [
     PaginationComponent,
     SearchSortBarComponent,
     ButtonComponent,

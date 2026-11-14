@@ -4,7 +4,9 @@
       <h1>Projects</h1>
       <p>Browse and manage projects</p>
     </div>
-    <app-btn *ngIf="canManage" variant="primary" (click)="openCreate()">New Project</app-btn>
+    @if (canManage) {
+      <app-btn variant="primary" (click)="openCreate()">New Project</app-btn>
+    }
   </div>
 
   <app-search-sort-bar
@@ -19,17 +21,21 @@
     (sortOrderChange)="onSortOrderChange($event)"
   ></app-search-sort-bar>
 
-  <div *ngIf="loading()" class="projects__state">
-    <app-spinner></app-spinner>
-    <span>Loading projects…</span>
-  </div>
+  @if (loading()) {
+    <div class="projects__state">
+      <app-spinner></app-spinner>
+      <span>Loading projects…</span>
+    </div>
+  }
 
-  <div *ngIf="!loading() && error()" class="projects__state projects__state--error">
-    <span>{{ error() }}</span>
-    <app-btn size="sm" variant="outline" (click)="load()">Retry</app-btn>
-  </div>
+  @if (!loading() && error()) {
+    <div class="projects__state projects__state--error">
+      <span>{{ error() }}</span>
+      <app-btn size="sm" variant="outline" (click)="load()">Retry</app-btn>
+    </div>
+  }
 
-  <ng-container *ngIf="!loading() && !error()">
+  @if (!loading() && !error()) {
     <app-project-table
       [projects]="projects()"
       [canManage]="canManage"
@@ -49,7 +55,7 @@
         (pageChange)="onPageChange($event)"
       ></app-pagination>
     </div>
-  </ng-container>
+  }
 
   <app-project-modal
     [open]="modalOpen()"

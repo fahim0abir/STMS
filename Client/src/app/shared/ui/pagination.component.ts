@@ -9,7 +9,7 @@ import { CommonModule } from '@angular/common';
   template: `
     <div class="pagination">
       <span class="pagination__summary">
-        Page {{ pageNumber }} of {{ totalPages || 1 }} Â· {{ totalCount }} item{{ totalCount === 1 ? '' : 's' }}
+        Page {{ pageNumber }} of {{ totalPages || 1 }} · {{ totalCount }} item{{ totalCount === 1 ? '' : 's' }}
       </span>
       <div class="pagination__controls">
         <button class="pagination__btn" [disabled]="pageNumber <= 1" (click)="go(pageNumber - 1)">Prev</button>

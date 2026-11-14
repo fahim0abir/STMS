@@ -3,14 +3,13 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Project, ProjectUpsert } from '../../../../shared/models/project.model';
 import { ButtonComponent } from '../../../../shared/ui/button.component';
 
-import { CommonModule } from '@angular/common';
-
 @Component({
   selector: 'app-project-modal',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, ButtonComponent],
+  imports: [ReactiveFormsModule, ButtonComponent],
   template: `
-    <div class="modal" *ngIf="open">
+    @if (open) {
+    <div class="modal">
       <div class="modal__backdrop" (click)="close.emit()"></div>
       <div class="modal__panel" role="dialog" aria-modal="true">
         <h2 class="modal__title">{{ project ? 'Edit Project' : 'New Project' }}</h2>
@@ -19,20 +18,22 @@ import { CommonModule } from '@angular/common';
           <label class="modal__field">
             <span>Name *</span>
             <input type="text" formControlName="name" maxlength="200" />
-            <small class="modal__error" *ngIf="form.controls.name.touched && form.controls.name.invalid">
-              Name is required (max 200 characters).
-            </small>
+            @if (form.controls.name.touched && form.controls.name.invalid) {
+              <small class="modal__error">Name is required (max 200 characters).</small>
+            }
           </label>
 
           <label class="modal__field">
             <span>Description</span>
             <textarea formControlName="description" rows="4" maxlength="1000"></textarea>
-            <small class="modal__error" *ngIf="form.controls.description.touched && form.controls.description.invalid">
-              Description must be at most 1000 characters.
-            </small>
+            @if (form.controls.description.touched && form.controls.description.invalid) {
+              <small class="modal__error">Description must be at most 1000 characters.</small>
+            }
           </label>
 
-          <p class="modal__error" *ngIf="errorMessage">{{ errorMessage }}</p>
+          @if (errorMessage) {
+            <p class="modal__error">{{ errorMessage }}</p>
+          }
 
           <div class="modal__actions">
             <app-btn variant="ghost" (click)="close.emit()">Cancel</app-btn>
@@ -43,6 +44,7 @@ import { CommonModule } from '@angular/common';
         </form>
       </div>
     </div>
+    }
   `,
   styles: [
     `
