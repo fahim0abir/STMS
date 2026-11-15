@@ -7,6 +7,7 @@ import { Role } from '../../shared/models/enums';
 import {
   CreateUserRequest,
   UpdateProfileRequest,
+  UpdateUserRoleRequest,
   User,
   normalizeUser,
 } from '../../shared/models/user.model';
@@ -36,6 +37,13 @@ export class UsersService {
   updateProfile(request: UpdateProfileRequest): Observable<User> {
     return this.http
       .put<ApiResponse<User>>(`${this.baseUrl}/me`, request)
+      .pipe(map((res) => normalizeUser(res.data) as User));
+  }
+
+  updateUserRole(userId: string, role: Role): Observable<User> {
+    const request: UpdateUserRoleRequest = { role };
+    return this.http
+      .put<ApiResponse<User>>(`${this.baseUrl}/${userId}/role`, request)
       .pipe(map((res) => normalizeUser(res.data) as User));
   }
 }

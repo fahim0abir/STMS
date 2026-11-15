@@ -101,6 +101,40 @@ public class UserService : IUserService
         return Map(user);
     }
 
+    public async Task<UserDto> UpdateUserRoleAsync(Guid userId, Guid currentUserId, UpdateUserRoleDto updateUserRoleDto)
+    {
+        if (userId == currentUserId)
+        {
+            throw new InvalidOperationException("You cannot change your own role.");
+        }
+
+        var user = await _userRepository.GetByIdAsync(userId);
+        if (user == null)
+        {
+            throw new NotFoundException("User not found.");
+        }
+
+        if (user.Role == Role.Admin)
+        {
+            throw new InvalidOperationException("Admin accounts cannot be modified.");
+        }
+
+        if (updateUserRoleDto.Role != Role.ProjectManager)
+        {
+            throw new InvalidOperationException("Only promotion to ProjectManager is supported.");
+        }
+
+        if (user.Role != Role.TeamMember)
+        {
+            throw new InvalidOperationException("Only TeamMember accounts can be promoted to ProjectManager.");
+        }
+
+        user.Role = Role.ProjectManager;
+        user.UpdatedAt = DateTime.UtcNow;
+        await _userRepository.SaveChangesAsync();
+        return Map(user);
+    }
+
     private static string Normalize(string email) => email.Trim().ToLowerInvariant();
 
     private static UserDto Map(User user) => new()

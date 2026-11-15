@@ -75,4 +75,22 @@ describe('UsersService', () => {
 
     expect(updated!.name).toBe('New Name');
   });
+
+  it('promotes a team member through /users/{id}/role', () => {
+    let updated: User | null = null;
+
+    service.updateUserRole('u3', Role.ProjectManager).subscribe((user) => (updated = user));
+
+    const req = httpMock.expectOne(`${API_BASE_URL}/users/u3/role`);
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body.role).toBe(Role.ProjectManager);
+    req.flush({
+      success: true,
+      data: { id: 'u3', email: 'member@example.com', name: 'Member', role: 1 },
+      message: 'Role updated.',
+      statusCode: 200,
+    });
+
+    expect(updated!.role).toBe('ProjectManager');
+  });
 });

@@ -111,4 +111,46 @@ public class UsersE2ETests
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
+
+    [Fact]
+    public async Task UpdateUserRole_PromotesTeamMemberToProjectManager()
+    {
+        var email = $"e2e-promote-{Guid.NewGuid():N}@smarttask.dev";
+        var created = await _fixture.Api.PostAsync(
+            "/api/users",
+            new { Email = email, Password = "Passw0rd!", Name = "Promote Me", Role = Role.TeamMember },
+            _fixture.Admin.AccessToken);
+        var createdBody = await ApiClient.ReadAsync<UserDto>(created);
+
+        var response = await _fixture.Api.PutAsync(
+            $"/api/users/{createdBody.Data!.Id}/role",
+            new { Role = Role.ProjectManager },
+            _fixture.Admin.AccessToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await ApiClient.ReadAsync<UserDto>(response);
+        Assert.Equal(Role.ProjectManager, body.Data!.Role);
+    }
+
+    [Fact]
+    public async Task UpdateUserRole_AsProjectManager_Returns403()
+    {
+        var response = await _fixture.Api.PutAsync(
+            $"/api/users/{Guid.NewGuid()}/role",
+            new { Role = Role.ProjectManager },
+            _fixture.Manager.AccessToken);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task UpdateUserRole_ForSelf_Returns400()
+    {
+        var response = await _fixture.Api.PutAsync(
+            $"/api/users/{TestData.AdminId}/role",
+            new { Role = Role.ProjectManager },
+            _fixture.Admin.AccessToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
 }

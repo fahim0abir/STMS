@@ -22,6 +22,10 @@ export interface UpdateProfileRequest {
   confirmPassword?: string | null;
 }
 
+export interface UpdateUserRoleRequest {
+  role: Role;
+}
+
 export interface AuthResult {
   user: User;
   accessToken: string;

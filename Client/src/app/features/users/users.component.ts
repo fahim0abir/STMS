@@ -33,11 +33,15 @@ import { SpinnerComponent } from '../../shared/ui/spinner.component';
         </div>
       }
 
+      @if (!loading() && actionError()) {
+        <p class="users__action-error">{{ actionError() }}</p>
+      }
+
       @if (!loading() && !error()) {
         <div class="users__table-wrap">
           <table class="users__table">
             <thead>
-              <tr><th>Name</th><th>Email</th><th>Role</th></tr>
+              <tr><th>Name</th><th>Email</th><th>Role</th><th>Actions</th></tr>
             </thead>
             <tbody>
               @for (user of users(); track user.id) {
@@ -45,10 +49,21 @@ import { SpinnerComponent } from '../../shared/ui/spinner.component';
                   <td>{{ user.name || '—' }}</td>
                   <td class="users__muted">{{ user.email }}</td>
                   <td><app-badge variant="secondary" [label]="user.role"></app-badge></td>
+                  <td>
+                    @if (user.role === 'TeamMember') {
+                      <app-btn
+                        size="sm"
+                        variant="outline"
+                        [loading]="updatingId() === user.id"
+                        [attr.data-testid]="'promote-user-' + user.id"
+                        (click)="promote(user)"
+                      >Make PM</app-btn>
+                    }
+                  </td>
                 </tr>
               }
               @if (!users().length) {
-                <tr><td colspan="3" class="users__empty">No users found.</td></tr>
+                <tr><td colspan="4" class="users__empty">No users found.</td></tr>
               }
             </tbody>
           </table>
@@ -115,6 +130,7 @@ import { SpinnerComponent } from '../../shared/ui/spinner.component';
       .users__table th { text-align: left; padding: 0.75rem 1rem; background: #f9fafb; color: #6b7280; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #e5e7eb; }
       .users__table td { padding: 0.75rem 1rem; border-bottom: 1px solid #f3f4f6; color: #111827; }
       .users__muted { color: #6b7280; }
+      .users__action-error { margin: 0 0 0.75rem; color: #b91c1c; font-size: 0.875rem; }
       .users__empty { text-align: center; color: #9ca3af; padding: 2rem 1rem; }
       .modal { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 1rem; }
       .modal__backdrop { position: absolute; inset: 0; background: rgb(17 24 39 / 0.5); }
@@ -140,6 +156,8 @@ export class UsersComponent {
   readonly modalOpen = signal(false);
   readonly saving = signal(false);
   readonly modalError = signal('');
+  readonly updatingId = signal<string | null>(null);
+  readonly actionError = signal('');
 
   readonly roleOptions = [
     { value: Role.ProjectManager, label: ROLE_LABELS[Role.ProjectManager] },
@@ -184,6 +202,26 @@ export class UsersComponent {
   closeModal(): void {
     this.modalOpen.set(false);
     this.saving.set(false);
+  }
+
+  promote(user: User): void {
+    if (this.updatingId()) return;
+
+    this.updatingId.set(user.id);
+    this.actionError.set('');
+    this.usersService
+      .updateUserRole(user.id, Role.ProjectManager)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.updatingId.set(null);
+          this.load();
+        },
+        error: (err) => {
+          this.updatingId.set(null);
+          this.actionError.set(err?.error?.message || 'Failed to update role.');
+        },
+      });
   }
 
   save(): void {

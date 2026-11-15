@@ -16,15 +16,18 @@ public class UsersController : ControllerBase
     private readonly IUserService _userService;
     private readonly IValidator<CreateUserDto> _createUserValidator;
     private readonly IValidator<UpdateProfileDto> _updateProfileValidator;
+    private readonly IValidator<UpdateUserRoleDto> _updateUserRoleValidator;
 
     public UsersController(
         IUserService userService,
         IValidator<CreateUserDto> createUserValidator,
-        IValidator<UpdateProfileDto> updateProfileValidator)
+        IValidator<UpdateProfileDto> updateProfileValidator,
+        IValidator<UpdateUserRoleDto> updateUserRoleValidator)
     {
         _userService = userService;
         _createUserValidator = createUserValidator;
         _updateProfileValidator = updateProfileValidator;
+        _updateUserRoleValidator = updateUserRoleValidator;
     }
 
     [HttpGet]
@@ -60,6 +63,20 @@ public class UsersController : ControllerBase
 
         var user = await _userService.UpdateProfileAsync(GetUserId(), updateProfileDto);
         return Ok(ApiResponse<UserDto>.Ok(user, "Profile updated."));
+    }
+
+    [HttpPut("{id:guid}/role")]
+    [Authorize(Roles = "Admin")]
+    public async Task<ActionResult<ApiResponse<UserDto>>> UpdateRoleAsync(Guid id, [FromBody] UpdateUserRoleDto updateUserRoleDto)
+    {
+        var validationResult = await _updateUserRoleValidator.ValidateAsync(updateUserRoleDto);
+        if (!validationResult.IsValid)
+        {
+            return BadRequest(ApiResponse<UserDto>.Error(string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage)), 400));
+        }
+
+        var user = await _userService.UpdateUserRoleAsync(id, GetUserId(), updateUserRoleDto);
+        return Ok(ApiResponse<UserDto>.Ok(user, "Role updated."));
     }
 
     private Guid GetUserId() => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);

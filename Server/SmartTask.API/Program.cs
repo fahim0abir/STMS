@@ -84,6 +84,7 @@ builder.Services.AddScoped<IValidator<EnhanceDescriptionRequestDto>, EnhanceDesc
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IValidator<CreateUserDto>, CreateUserDtoValidator>();
 builder.Services.AddScoped<IValidator<UpdateProfileDto>, UpdateProfileDtoValidator>();
+builder.Services.AddScoped<IValidator<UpdateUserRoleDto>, UpdateUserRoleDtoValidator>();
 builder.Services.AddScoped<IValidator<ProjectManagerAssignDto>, ProjectManagerAssignDtoValidator>();
 builder.Services.AddScoped<IValidator<TaskAssigneeAssignDto>, TaskAssigneeAssignDtoValidator>();
 

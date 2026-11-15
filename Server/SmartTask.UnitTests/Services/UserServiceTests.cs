@@ -129,4 +129,46 @@ public class UserServiceTests
 
         Assert.Equal("New passwords do not match.", exception.Message);
     }
+
+    [Fact]
+    public async Task UpdateUserRoleAsync_PromotesTeamMemberToProjectManager()
+    {
+        using var db = new TestDatabase();
+        var admin = db.AddUser("admin@example.com", Role.Admin);
+        var member = db.AddUser("dev@example.com", Role.TeamMember);
+        var service = new UserService(db.Users, new PasswordHasher());
+
+        var updated = await service.UpdateUserRoleAsync(
+            member.Id,
+            admin.Id,
+            new UpdateUserRoleDto { Role = Role.ProjectManager });
+
+        Assert.Equal(Role.ProjectManager, updated.Role);
+        var stored = await db.Context.Users.FindAsync(member.Id);
+        Assert.NotNull(stored);
+        Assert.Equal(Role.ProjectManager, stored!.Role);
+    }
+
+    [Fact]
+    public async Task UpdateUserRoleAsync_WhenTargetIsNotTeamMember_ThrowsInvalidOperation()
+    {
+        using var db = new TestDatabase();
+        var admin = db.AddUser("admin@example.com", Role.Admin);
+        var manager = db.AddUser("pm@example.com", Role.ProjectManager);
+        var service = new UserService(db.Users, new PasswordHasher());
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.UpdateUserRoleAsync(manager.Id, admin.Id, new UpdateUserRoleDto { Role = Role.ProjectManager }));
+    }
+
+    [Fact]
+    public async Task UpdateUserRoleAsync_WhenUserMissing_ThrowsNotFound()
+    {
+        using var db = new TestDatabase();
+        var admin = db.AddUser("admin@example.com", Role.Admin);
+        var service = new UserService(db.Users, new PasswordHasher());
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            service.UpdateUserRoleAsync(Guid.NewGuid(), admin.Id, new UpdateUserRoleDto { Role = Role.ProjectManager }));
+    }
 }
