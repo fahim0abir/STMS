@@ -88,11 +88,35 @@ jobs:
       - name: Build .NET Project
         run: dotnet build ./Server/SmartTask.API/SmartTask.API.csproj --configuration Release --no-restore
 
-      - name: Publish .NET Project
-        run: dotnet publish ./Server/SmartTask.API/SmartTask.API.csproj --configuration Release --output C:/inetpub/STMS.Server --no-build
-
-      - name: Copy Angular Build into iis
+      - name: Publish and Deploy to IIS with Auto-Recovery
         shell: powershell
         run: |
-          Remove-Item -Recurse -Force C:/inetpub/STMS.Client/*
-          Copy-Item -Recurse -Force ./Client/dist/smart-task-ui/browser/* C:/inetpub/STMS.Client/
+          Import-Module WebAdministration
+          $siteName = "STMS.Server"     # Update if your IIS site name differs
+          $appPoolName = "STMS.Server"  # Update if your IIS app pool name differs
+
+          try {
+              Write-Host "=== Stopping IIS Website and App Pool ==="
+              Stop-WebSite -Name $siteName -ErrorAction SilentlyContinue
+              Stop-WebAppPool -Name $appPoolName -ErrorAction SilentlyContinue
+              
+              # Allow w3wp.exe time to fully release file locks
+              Start-Sleep -Seconds 3
+
+              Write-Host "=== Publishing .NET Backend ==="
+              dotnet publish ./Server/SmartTask.API/SmartTask.API.csproj --configuration Release --output C:/inetpub/STMS.Server --no-build
+              if ($LASTEXITCODE -ne 0) { throw "Dotnet publish failed." }
+
+              Write-Host "=== Deploying Angular Frontend ==="
+              Remove-Item -Recurse -Force C:/inetpub/STMS.Client/* -ErrorAction SilentlyContinue
+              Copy-Item -Recurse -Force ./Client/dist/smart-task-ui/browser/* C:/inetpub/STMS.Client/
+          }
+          catch {
+              Write-Error "Deployment pipeline failed: $_"
+              throw $_
+          }
+          finally {
+              Write-Host "=== Restarting IIS App Pool and Website ==="
+              Start-WebAppPool -Name $appPoolName -ErrorAction SilentlyContinue
+              Start-WebSite -Name $siteName -ErrorAction SilentlyContinue
+          }
