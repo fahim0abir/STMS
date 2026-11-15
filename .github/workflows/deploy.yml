@@ -38,6 +38,7 @@ jobs:
           JWT_KEY_SECRET: ${{ secrets.JWT_KEY }}
           AI_GITHUB_MODELS_API_KEY: ${{ secrets.AI_GITHUB_MODELS_API_KEY }}
           AI__GOOGLEAISTUDIO__APIKEY: ${{ secrets.AI__GOOGLEAISTUDIO__APIKEY }}
+          CORS_ALLOWED_ORIGINS: ${{ "http://144.79.249.252:8021" }}
         run: |
           $filePath = "./Server/SmartTask.API/appsettings.json"
 
@@ -81,6 +82,19 @@ jobs:
 
           # Inject or update the ApiKey property securely from the GitHub secret
           $json.AI.GoogleAIStudio | Add-Member -NotePropertyName 'ApiKey' -NotePropertyValue $env:AI__GOOGLEAISTUDIO__APIKEY -Force
+
+          # Ensure the 'CORS' section exists
+          if (-not $json.PSObject.Properties['CORS']) {
+              $json | Add-Member -NotePropertyName 'CORS' -NotePropertyValue ([PSCustomObject]@{});
+          }
+
+          # Ensure the 'AllowedOrigins' property exists within the 'CORS' section
+          if (-not $json.CORS.PSObject.Properties['AllowedOrigins']) {
+              $json.CORS | Add-Member -NotePropertyName 'AllowedOrigins' -NotePropertyValue @() -Force
+          }
+
+          # Inject or update the AllowedOrigins property securely from the GitHub secret
+          $json.CORS.AllowedOrigins = $env:CORS_ALLOWED_ORIGINS -split ',' | ForEach-Object { $_.Trim() }
 
           # Save back to appsettings.json
           $json | ConvertTo-Json -Depth 10 | Set-Content $filePath
