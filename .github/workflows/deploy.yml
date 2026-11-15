@@ -101,7 +101,7 @@ jobs:
           $allowedOriginsList = @($env:CORS_ALLOWED_ORIGINS | ConvertFrom-Json)
 
           # Inject or update the AllowedOrigins property securely from the GitHub secret
-          $json.CORS | Add-Member -NotePropertyName 'AllowedOrigins' -NotePropertyValue $allowedOriginsList -Force
+          $json.CORS | Add-Member -NotePropertyName 'AllowedOrigins' -NotePropertyValue $allowedOriginsList.value -Force
 
           # Save back to appsettings.json
           $json | ConvertTo-Json -Depth 10 | Set-Content $filePath
