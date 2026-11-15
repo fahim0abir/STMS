@@ -36,6 +36,8 @@ jobs:
         env:
           ConnectionStrings_DefaultConnection: ${{ secrets.ConnectionStrings_DefaultConnection }}
           JWT_KEY_SECRET: ${{ secrets.JWT_KEY }}
+          JWT_Issuer: "SmartTask"
+          JWT_Audience: "SmartTaskClients"
           AI_GITHUB_MODELS_API_KEY: ${{ secrets.AI_GITHUB_MODELS_API_KEY }}
           AI__GOOGLEAISTUDIO__APIKEY: ${{ secrets.AI__GOOGLEAISTUDIO__APIKEY }}
           CORS_ALLOWED_ORIGINS: "http://144.79.249.252:8021"
@@ -69,6 +71,8 @@ jobs:
 
           # Inject or update the Key property securely from the GitHub secret
           $json.Jwt | Add-Member -NotePropertyName 'Key' -NotePropertyValue $env:JWT_KEY_SECRET -Force
+          $json.Jwt | Add-Member -NotePropertyName 'Issuer' -NotePropertyValue $env:JWT_Issuer -Force
+          $json.Jwt | Add-Member -NotePropertyName 'Audience' -NotePropertyValue $env:JWT_Audience -Force
 
           # Ensure the 'AI' section exists
           if (-not $json.PSObject.Properties['AI']) {
