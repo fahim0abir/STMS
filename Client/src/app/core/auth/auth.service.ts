@@ -15,7 +15,7 @@ export interface AuthCredentials {
 export interface RegisterDto {
   email: string;
   password: string;
-  fullName: string;
+  name?: string | null;
 }
 
 @Injectable({ providedIn: 'root' })

@@ -23,6 +23,18 @@ public class AuthDtoValidatorTests
         result.ShouldNotHaveAnyErrors();
     }
 
+    [Fact]
+    public void Register_WithoutName_ReportsError()
+    {
+        var result = _registerValidator.TestValidate(new RegisterDto
+        {
+            Email = "user@example.com",
+            Password = "Password123"
+        });
+
+        result.ShouldHaveValidationErrorFor(x => x.Name);
+    }
+
     [Theory]
     [InlineData("", "Password123")]
     [InlineData("not-an-email", "Password123")]

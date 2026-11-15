@@ -9,6 +9,6 @@ public class RegisterDtoValidator : AbstractValidator<RegisterDto>
     {
         RuleFor(x => x.Email).NotEmpty().EmailAddress();
         RuleFor(x => x.Password).NotEmpty().MinimumLength(8).MaximumLength(100);
-        RuleFor(x => x.Name).MaximumLength(100).When(x => !string.IsNullOrWhiteSpace(x.Name));
+        RuleFor(x => x.Name).NotEmpty().MaximumLength(100);
     }
 }

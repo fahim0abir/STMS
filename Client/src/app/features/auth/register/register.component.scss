@@ -1,6 +1,9 @@
 .register-container { max-width: 400px; margin: 40px auto; padding: 0 16px; font-family: system-ui, sans-serif; }
 .register-container h2 { text-align: center; }
 .register-container input { width: 100%; padding: 8px; margin: 8px 0; box-sizing: border-box; }
+.register-container .password-field { position: relative; margin: 8px 0; }
+.register-container .password-field input { margin: 0; padding-right: 2.5rem; }
+.register-container .password-field app-password-toggle { position: absolute; top: 50%; right: 4px; transform: translateY(-50%); }
 .register-container .hint { color: #d32f2f; font-size: 0.85rem; }
 .register-container .error { background: #ffcdd2; color: #b71c1c; padding: 8px; border-radius: 4px; margin: 8px 0; }
 .register-container button { width: 100%; padding: 10px; background: #1976d2; color: #fff; border: none; border-radius: 4px; cursor: pointer; }

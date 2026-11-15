@@ -1,13 +1,19 @@
 <div class="register-container">
   <form [formGroup]="form" (ngSubmit)="onSubmit()">
     <h2>Register</h2>
-    <input formControlName="fullName" placeholder="Full name" />
+    <input formControlName="name" placeholder="Full name" />
     <input formControlName="email" placeholder="Email" type="email" />
     @if (form.get('email')?.invalid && form.get('email')?.touched) {
       <div class="hint">Enter a valid email</div>
     }
-    <input formControlName="password" placeholder="Password" type="password" />
-    <input formControlName="confirmPassword" placeholder="Confirm password" type="password" />
+    <div class="password-field">
+      <input formControlName="password" placeholder="Password" autocomplete="new-password" [type]="showPassword() ? 'text' : 'password'" />
+      <app-password-toggle [visible]="showPassword()" (toggled)="showPassword.set(!showPassword())" />
+    </div>
+    <div class="password-field">
+      <input formControlName="confirmPassword" placeholder="Confirm password" autocomplete="new-password" [type]="showConfirmPassword() ? 'text' : 'password'" />
+      <app-password-toggle [visible]="showConfirmPassword()" (toggled)="showConfirmPassword.set(!showConfirmPassword())" />
+    </div>
     @if (form.errors?.['passwordsMismatch'] && form.get('confirmPassword')?.touched) {
       <div class="hint">Passwords do not match</div>
     }

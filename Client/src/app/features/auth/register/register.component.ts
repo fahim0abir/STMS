@@ -4,11 +4,12 @@ import { Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../../core/auth/auth.service';
 import { passwordsMatch } from '../../../shared/passwords-match.validator';
+import { PasswordToggleComponent } from '../../../shared/ui/password-toggle.component';
 
 @Component({
   selector: 'app-register',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, PasswordToggleComponent],
   templateUrl: './register.component.html',
   styleUrl: './register.component.scss',
 })
@@ -20,12 +21,14 @@ export class RegisterComponent {
 
   readonly error = signal<string>('');
   readonly isLoading = signal<boolean>(false);
+  readonly showPassword = signal<boolean>(false);
+  readonly showConfirmPassword = signal<boolean>(false);
 
   readonly form = this.fb.group(
     {
-      fullName: ['', Validators.required],
+      name: ['', Validators.required],
       email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(6)]],
+      password: ['', [Validators.required, Validators.minLength(8)]],
       confirmPassword: ['', Validators.required],
     },
     { validators: passwordsMatch('password', 'confirmPassword') },
@@ -35,8 +38,9 @@ export class RegisterComponent {
     if (this.form.invalid) return;
     this.isLoading.set(true);
     this.error.set('');
+    const { email, password, name } = this.form.getRawValue();
     this.authService
-      .register(this.form.value as never)
+      .register({ email: email ?? '', password: password ?? '', name: name?.trim() || null })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => this.router.navigate(['/login']),
@@ -47,4 +51,3 @@ export class RegisterComponent {
       });
   }
 }
-

@@ -56,7 +56,7 @@ describe('AuthService', () => {
 
   it('normalizes the registered user payload', () => {
     let name: string | null | undefined;
-    service.register({ email: 'new@example.com', password: 'Password123', fullName: 'New' }).subscribe((user) => {
+    service.register({ email: 'new@example.com', password: 'Password123', name: 'New' }).subscribe((user) => {
       name = user?.name;
     });
 
