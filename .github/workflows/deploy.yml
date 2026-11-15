@@ -38,7 +38,7 @@ jobs:
           JWT_KEY_SECRET: ${{ secrets.JWT_KEY }}
           AI_GITHUB_MODELS_API_KEY: ${{ secrets.AI_GITHUB_MODELS_API_KEY }}
           AI__GOOGLEAISTUDIO__APIKEY: ${{ secrets.AI__GOOGLEAISTUDIO__APIKEY }}
-          CORS_ALLOWED_ORIGINS: ${{ "http://144.79.249.252:8021" }}
+          CORS_ALLOWED_ORIGINS: "http://144.79.249.252:8021"
         run: |
           $filePath = "./Server/SmartTask.API/appsettings.json"
 
