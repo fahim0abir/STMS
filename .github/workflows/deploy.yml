@@ -39,7 +39,7 @@ jobs:
           AI_GITHUB_MODELS_API_KEY: ${{ secrets.AI_GITHUB_MODELS_API_KEY }}
           AI__GOOGLEAISTUDIO__APIKEY: ${{ secrets.AI__GOOGLEAISTUDIO__APIKEY }}
         run: |
-          $filePath = "./Server/SmartTask.API/appsettings.prod.json"
+          $filePath = "./Server/SmartTask.API/appsettings.json"
 
           # Ensure the target directory exists
           $dir = Split-Path -Parent $filePath
@@ -80,7 +80,7 @@ jobs:
           }
 
           # Inject or update the ApiKey property securely from the GitHub secret
-          $json.AI.GoogleAIStudio | Add-Member -NotePropertyName 'ApiKey' -NotePropertyValue $env:AI_GITHUB_MODELS_API_KEY -Force
+          $json.AI.GoogleAIStudio | Add-Member -NotePropertyName 'ApiKey' -NotePropertyValue $env:AI__GOOGLEAISTUDIO__APIKEY -Force
 
           # Save back to appsettings.json
           $json | ConvertTo-Json -Depth 10 | Set-Content $filePath
