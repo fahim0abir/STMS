@@ -14,6 +14,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<TaskItem> TaskItems => Set<TaskItem>();
+    public DbSet<AiInteractionLog> AiInteractionLogs => Set<AiInteractionLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -28,6 +29,7 @@ public class ApplicationDbContext : DbContext
             entity.HasMany(u => u.RefreshTokens).WithOne(r => r.User).HasForeignKey(r => r.UserId);
             entity.HasMany(u => u.ManagedProjects).WithOne(p => p.Manager).HasForeignKey(p => p.ManagerId);
             entity.HasMany(u => u.Tasks).WithOne(t => t.Assignee).HasForeignKey(t => t.AssigneeId).IsRequired(false);
+            entity.HasIndex(u => u.Email).IsUnique();
         });
 
         modelBuilder.Entity<RefreshToken>(entity =>
@@ -57,8 +59,24 @@ public class ApplicationDbContext : DbContext
             entity.Property(t => t.Title).IsRequired().HasMaxLength(200);
             entity.Property(t => t.Description).HasMaxLength(4000);
             entity.Property(t => t.AiSuggestionJson);
+            entity.Property(t => t.AiSuggestedDescription);
+            entity.Property(t => t.AiSuggestedTitle).HasMaxLength(200);
+            entity.Property(t => t.AiModel).HasMaxLength(100);
             entity.HasOne(t => t.Project).WithMany(p => p.Tasks).HasForeignKey(t => t.ProjectId);
             entity.HasOne(t => t.Assignee).WithMany(u => u.Tasks).HasForeignKey(t => t.AssigneeId).IsRequired(false);
+        });
+
+        modelBuilder.Entity<AiInteractionLog>(entity =>
+        {
+            entity.HasKey(l => l.Id);
+            entity.Property(l => l.UserEmail).IsRequired().HasMaxLength(256);
+            entity.Property(l => l.UserName).HasMaxLength(100);
+            entity.Property(l => l.UserRole).HasMaxLength(50);
+            entity.Property(l => l.Model).IsRequired().HasMaxLength(100);
+            entity.Property(l => l.Prompt).IsRequired();
+            entity.Property(l => l.InputText).IsRequired();
+            entity.Property(l => l.OutputJson).IsRequired();
+            entity.HasIndex(l => l.CreatedAt);
         });
     }
 }

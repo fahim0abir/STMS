@@ -14,6 +14,9 @@ export interface TaskItem {
   assigneeName?: string | null;
   dueAt?: string | null;
   aiSuggestionJson?: string | null;
+  aiSuggestedDescription?: string | null;
+  aiSuggestedTitle?: string | null;
+  aiModel?: string | null;
   createdAt?: string;
   updatedAt?: string | null;
 }
@@ -26,6 +29,9 @@ export interface TaskItemUpsert {
   assigneeId?: string | null;
   dueAt?: string | null;
   aiSuggestionJson?: string | null;
+  aiSuggestedDescription?: string | null;
+  aiSuggestedTitle?: string | null;
+  aiModel?: string | null;
 }
 
 export interface TaskItemQuery extends PageQuery {

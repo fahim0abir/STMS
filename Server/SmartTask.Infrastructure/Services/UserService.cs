@@ -5,6 +5,7 @@ using SmartTask.Domain.Entities;
 using SmartTask.Domain.Enums;
 using SmartTask.Infrastructure.Auth;
 using SmartTask.Infrastructure.Exceptions;
+using SmartTask.Infrastructure.Persistence;
 using SmartTask.Infrastructure.Repositories;
 
 namespace SmartTask.Infrastructure.Services;
@@ -60,7 +61,7 @@ public class UserService : IUserService
         };
 
         await _userRepository.AddAsync(user);
-        await _userRepository.SaveChangesAsync();
+        await UniqueConstraintGuard.SaveChangesOrThrowDuplicateEmailAsync(() => _userRepository.SaveChangesAsync());
         return Map(user);
     }
 
@@ -97,7 +98,7 @@ public class UserService : IUserService
         user.Email = email;
         user.Name = updateProfileDto.Name;
         user.UpdatedAt = DateTime.UtcNow;
-        await _userRepository.SaveChangesAsync();
+        await UniqueConstraintGuard.SaveChangesOrThrowDuplicateEmailAsync(() => _userRepository.SaveChangesAsync());
         return Map(user);
     }
 

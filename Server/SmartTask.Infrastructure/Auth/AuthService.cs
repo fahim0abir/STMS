@@ -51,9 +51,20 @@ public class AuthService : IAuthService
         };
 
         await _userRepository.AddAsync(user);
-        await _userRepository.SaveChangesAsync();
+        await UniqueConstraintGuard.SaveChangesOrThrowDuplicateEmailAsync(() => _userRepository.SaveChangesAsync());
 
         return new UserDto { Id = user.Id, Email = user.Email, Name = user.Name, Role = user.Role };
+    }
+
+    public async Task<bool> IsEmailAvailableAsync(string email)
+    {
+        var normalizedEmail = email.Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(normalizedEmail))
+        {
+            return true;
+        }
+
+        return await _userRepository.FindSingleAsync(u => u.Email == normalizedEmail) == null;
     }
 
     public async Task<(UserDto User, string AccessToken, DateTime AccessTokenExpiresAt, string RefreshToken)> LoginAsync(LoginDto loginDto)

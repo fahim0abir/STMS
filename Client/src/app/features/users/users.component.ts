@@ -2,6 +2,8 @@ import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { UsersService } from '../../core/services/users.service';
+import { AuthService } from '../../core/auth/auth.service';
+import { uniqueEmail } from '../../shared/unique-email.validator';
 import { Role, ROLE_LABELS } from '../../shared/models/enums';
 import { User } from '../../shared/models/user.model';
 import { BadgeComponent } from '../../shared/ui/badge.component';
@@ -79,7 +81,9 @@ import { SpinnerComponent } from '../../shared/ui/spinner.component';
               <label class="modal__field">
                 <span>Email *</span>
                 <input type="email" formControlName="email" maxlength="256" />
-                @if (form.controls.email.touched && form.controls.email.invalid) {
+                @if (form.controls.email.touched && form.controls.email.hasError('emailTaken')) {
+                  <small class="modal__error">This email is already registered.</small>
+                } @else if (form.controls.email.touched && form.controls.email.invalid) {
                   <small class="modal__error">A valid email is required.</small>
                 }
               </label>
@@ -147,6 +151,7 @@ import { SpinnerComponent } from '../../shared/ui/spinner.component';
 })
 export class UsersComponent {
   private readonly usersService = inject(UsersService);
+  private readonly authService = inject(AuthService);
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -165,7 +170,11 @@ export class UsersComponent {
   ];
 
   readonly form = this.fb.nonNullable.group({
-    email: ['', [Validators.required, Validators.email, Validators.maxLength(256)]],
+    email: [
+      '',
+      [Validators.required, Validators.email, Validators.maxLength(256)],
+      uniqueEmail(this.authService),
+    ],
     name: ['', [Validators.maxLength(100)]],
     password: ['', [Validators.required, Validators.minLength(8), Validators.maxLength(100)]],
     role: [Role.TeamMember as Role, [Validators.required]],
@@ -226,7 +235,7 @@ export class UsersComponent {
 
   save(): void {
     if (this.saving()) return;
-    if (this.form.invalid) {
+    if (this.form.invalid || this.form.pending) {
       this.form.markAllAsTouched();
       return;
     }

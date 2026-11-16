@@ -117,6 +117,11 @@ applies the description, fills an empty title and sets the priority.
   so it never fabricates external systems.
 - Timeouts caused by client disconnects surface as HTTP 504; rate-limit breaches as 429.
 
+**Audit trail:**
+
+- Successful model calls are written to `AiInteractionLogs` with caller identity, model, full prompt, raw output and latency.
+- Local/fallback suggestions are not logged, and a logging failure never fails the user request.
+
 **Secrets & data handling:**
 
 - API key is read from user-secrets (`AI:GoogleAIStudio:ApiKey`), never from source control.

@@ -1,6 +1,7 @@
 using System.Text;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -18,6 +19,7 @@ using SmartTask.Application.DTOs;
 using SmartTask.Domain.Enums;
 using Serilog;
 using SmartTask.Domain.Entities;
+using Swashbuckle.AspNetCore.SwaggerUI;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -71,6 +73,7 @@ builder.Services.AddHealthChecks()
 builder.Services.AddScoped<IRepository<User>, Repository<User>>();
 builder.Services.AddScoped<IRepository<Project>, Repository<Project>>();
 builder.Services.AddScoped<IRepository<TaskItem>, Repository<TaskItem>>();
+builder.Services.AddScoped<IRepository<AiInteractionLog>, Repository<AiInteractionLog>>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
@@ -79,10 +82,12 @@ builder.Services.AddScoped<IProjectService, ProjectService>();
 builder.Services.AddScoped<ITaskItemService, TaskItemService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<ITaskDescriptionEnhancementService, TaskDescriptionEnhancementService>();
+builder.Services.AddScoped<IAiInteractionLogService, AiInteractionLogService>();
 builder.Services.AddScoped<IValidator<ProjectQueryDto>, ProjectQueryDtoValidator>();
 builder.Services.AddScoped<IValidator<ProjectCreateDto>, ProjectCreateDtoValidator>();
 builder.Services.AddScoped<IValidator<TaskItemQueryDto>, TaskItemQueryDtoValidator>();
 builder.Services.AddScoped<IValidator<EnhanceDescriptionRequestDto>, EnhanceDescriptionRequestDtoValidator>();
+builder.Services.AddScoped<IValidator<AiInteractionLogQueryDto>, AiInteractionLogQueryDtoValidator>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IValidator<CreateUserDto>, CreateUserDtoValidator>();
 builder.Services.AddScoped<IValidator<UpdateProfileDto>, UpdateProfileDtoValidator>();
@@ -169,6 +174,8 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
+    app.UseSwaggerUI(c => { c.SwaggerEndpoint("/swagger/v1/swagger.json", "SmartTask.API v1");
+        c.RoutePrefix = string.Empty; });
 }
 
 app.UseMiddleware<GlobalExceptionMiddleware>();

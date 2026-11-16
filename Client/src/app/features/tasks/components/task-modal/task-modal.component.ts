@@ -56,6 +56,7 @@ export class TaskModalComponent implements OnChanges {
   readonly aiSuggestion = signal<AiEnhanceResult | null>(null);
   readonly storedSuggestion = signal<AiEnhanceResult | null>(null);
   readonly aiSuggestionJson = signal<string | null>(null);
+  readonly aiModel = signal<string | null>(null);
   readonly canRevert = signal(false);
 
   private descriptionBeforeAccept: string | null = null;
@@ -77,6 +78,8 @@ export class TaskModalComponent implements OnChanges {
     projectId: [''],
     title: ['', [Validators.required, Validators.maxLength(200)]],
     description: ['', [Validators.maxLength(4000)]],
+    aiSuggestedTitle: ['', [Validators.maxLength(200)]],
+    aiSuggestedDescription: ['', [Validators.maxLength(4000)]],
     status: [TaskStatus.ToDo as TaskStatus, [Validators.required]],
     priority: [TaskPriority.Medium as TaskPriority, [Validators.required]],
     assigneeId: [''],
@@ -92,6 +95,7 @@ export class TaskModalComponent implements OnChanges {
       this.resetState();
       this.aiSuggestionJson.set(this.task?.aiSuggestionJson ?? null);
       this.storedSuggestion.set(this.parseStoredSuggestion(this.task?.aiSuggestionJson));
+      this.aiModel.set(this.task?.aiModel ?? null);
       this.form.reset({
         projectId: '',
         title: this.task?.title ?? '',
@@ -100,6 +104,8 @@ export class TaskModalComponent implements OnChanges {
         priority: this.task?.priority ?? TaskPriority.Medium,
         assigneeId: this.task?.assigneeId ?? '',
         dueAt: this.toDateInput(this.task?.dueAt),
+        aiSuggestedTitle: this.task?.aiSuggestedTitle ?? '',
+        aiSuggestedDescription: this.task?.aiSuggestedDescription ?? '',
       });
     }
   }
@@ -129,6 +135,9 @@ export class TaskModalComponent implements OnChanges {
           this.aiUsedFallback.set(result.usedFallback);
           this.aiMessage.set(result.message ?? '');
           this.aiSuggestion.set(result);
+          this.aiModel.set(result.model ?? null);
+          this.form.controls.aiSuggestedTitle.setValue(result.suggestedTitle ?? '');
+          this.form.controls.aiSuggestedDescription.setValue(result.enhancedDescription ?? '');
         },
         error: (err) => {
           this.aiLoading.set(false);
@@ -141,24 +150,23 @@ export class TaskModalComponent implements OnChanges {
     const suggestion = this.aiSuggestion();
     if (!suggestion) return;
 
+    const suggestedDescription = (
+      this.form.controls.aiSuggestedDescription.value ||
+      suggestion.enhancedDescription ||
+      ''
+    ).trim();
+
+    if (!suggestedDescription) {
+      this.aiMessage.set('The AI suggestion is empty. Run "Improve with AI" again.');
+      return;
+    }
+
     this.descriptionBeforeAccept = this.form.controls.description.value;
+    this.form.controls.description.setValue(suggestedDescription.slice(0, this.maxDescriptionLength));
 
-    const extras: string[] = [];
-    if (suggestion.acceptanceCriteria?.length) {
-      extras.push(`**Acceptance criteria**\n${suggestion.acceptanceCriteria.map((item) => `- ${item}`).join('\n')}`);
-    }
-    if (suggestion.subtasks?.length) {
-      extras.push(`**Subtasks**\n${suggestion.subtasks.map((item) => `- ${item}`).join('\n')}`);
-    }
-    if (suggestion.estimatedHours) {
-      extras.push(`**Estimated effort:** ~${suggestion.estimatedHours}h`);
-    }
-
-    const combined = [suggestion.enhancedDescription, ...extras].filter(Boolean).join('\n\n');
-    this.form.controls.description.setValue(combined.slice(0, this.maxDescriptionLength));
-
-    if (!this.form.controls.title.value.trim() && suggestion.suggestedTitle) {
-      this.form.controls.title.setValue(suggestion.suggestedTitle);
+    const suggestedTitle = this.form.controls.aiSuggestedTitle.value.trim() || suggestion.suggestedTitle;
+    if (!this.form.controls.title.value.trim() && suggestedTitle) {
+      this.form.controls.title.setValue(suggestedTitle.slice(0, 200));
     }
 
     this.form.controls.priority.setValue(Number(suggestion.suggestedPriority) as TaskPriority);
@@ -167,12 +175,17 @@ export class TaskModalComponent implements OnChanges {
     this.storedSuggestion.set(suggestion);
     this.aiSuggestion.set(null);
     this.canRevert.set(true);
-    this.aiMessage.set('AI suggestion applied and will be saved with the task.');
+    this.aiMessage.set('AI suggestion applied to the description. The suggestion is also saved in its own task field.');
   }
 
   rejectSuggestion(): void {
     this.aiSuggestion.set(null);
-    this.aiMessage.set('');
+    this.form.controls.aiSuggestedTitle.setValue('');
+    this.form.controls.aiSuggestedDescription.setValue('');
+    this.aiSuggestionJson.set(null);
+    this.aiModel.set(null);
+    this.storedSuggestion.set(null);
+    this.aiMessage.set('AI suggestion discarded.');
   }
 
   revertDescription(): void {
@@ -205,6 +218,9 @@ export class TaskModalComponent implements OnChanges {
       assigneeId: raw.assigneeId || null,
       dueAt: raw.dueAt ? new Date(raw.dueAt).toISOString() : null,
       aiSuggestionJson: this.aiSuggestionJson(),
+      aiSuggestedDescription: raw.aiSuggestedDescription?.trim() || null,
+      aiSuggestedTitle: raw.aiSuggestedTitle?.trim() || null,
+      aiModel: this.aiModel(),
     };
 
     this.save.emit({
@@ -223,6 +239,7 @@ export class TaskModalComponent implements OnChanges {
     this.aiSuggestion.set(null);
     this.storedSuggestion.set(null);
     this.aiSuggestionJson.set(null);
+    this.aiModel.set(null);
     this.aiMessage.set('');
     this.aiUsedFallback.set(false);
     this.aiLoading.set(false);

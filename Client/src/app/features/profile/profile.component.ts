@@ -4,6 +4,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../../core/auth/auth.service';
 import { UsersService } from '../../core/services/users.service';
 import { passwordsMatch } from '../../shared/passwords-match.validator';
+import { uniqueEmail } from '../../shared/unique-email.validator';
 import { ButtonComponent } from '../../shared/ui/button.component';
 import { PasswordToggleComponent } from '../../shared/ui/password-toggle.component';
 
@@ -27,7 +28,9 @@ import { PasswordToggleComponent } from '../../shared/ui/password-toggle.compone
         <label class="profile__field">
           <span>Email *</span>
           <input type="email" formControlName="email" maxlength="256" />
-          @if (form.controls.email.touched && form.controls.email.invalid) {
+          @if (form.controls.email.touched && form.controls.email.hasError('emailTaken')) {
+            <small class="profile__error">This email is already registered.</small>
+          } @else if (form.controls.email.touched && form.controls.email.invalid) {
             <small class="profile__error">A valid email is required.</small>
           }
         </label>
@@ -127,7 +130,11 @@ export class ProfileComponent {
   readonly form = this.fb.nonNullable.group(
     {
       name: [this.authService.currentUserValue?.name ?? '', [Validators.maxLength(100)]],
-      email: [this.authService.currentUserValue?.email ?? '', [Validators.required, Validators.email]],
+      email: [
+        this.authService.currentUserValue?.email ?? '',
+        [Validators.required, Validators.email],
+        uniqueEmail(this.authService, () => this.authService.currentUserValue?.email),
+      ],
       currentPassword: [''],
       newPassword: [''],
       confirmPassword: [''],

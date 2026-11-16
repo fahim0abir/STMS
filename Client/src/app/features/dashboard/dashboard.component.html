@@ -50,6 +50,16 @@
       ></app-kpi-card>
     </section>
 
+    @if (boardError()) {
+      <p class="dashboard__board-error">{{ boardError() }}</p>
+    }
+
+    <app-task-board
+      [tasks]="myTasks()"
+      [busyId]="boardBusyId()"
+      (statusChange)="onBoardStatusChange($event)"
+    ></app-task-board>
+
     <section class="dashboard__grid">
       <app-stat-breakdown title="Tasks by Status" [rows]="statusRows()"></app-stat-breakdown>
       <app-stat-breakdown title="Tasks by Priority" [rows]="priorityRows()"></app-stat-breakdown>

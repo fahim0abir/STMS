@@ -180,6 +180,7 @@ All responses use the `ApiResponse<T>` envelope: `{ success, message, data, stat
 | Tasks | `DELETE /api/taskitems/{id}` | Admin |
 | Dashboard | `GET /api/dashboard/stats` | Totals, breakdowns, completion rate, upcoming due |
 | AI | `POST /api/tasks/enhance-description` | Structured AI task improvement (rate limited) |
+| AI | `GET /api/ailogs/paged` | Admin only - successful AI calls with user, model, prompt, output, duration (`keyword, model, userId, from, to, pageNumber, pageSize`) |
 | Health | `GET /health` | ASP.NET health checks incl. database probe |
 
 `docs/swagger.json` is the single exported API collection (Swagger/OpenAPI); import it into Postman or open it in
@@ -202,6 +203,7 @@ Swagger UI. The previous hand-maintained Postman collection was removed so the c
 | Self profile update | Yes | Yes | Yes |
 | Dashboard | All data | Managed projects | Assigned tasks |
 | AI enhance description | Yes | Yes | Yes |
+| AI call logs (`/api/ailogs`) | Yes | No | No |
 
 Admin accounts are immutable from the user-management surface: they never appear in `/api/users`, cannot be
 assigned as project manager or task assignee, and cannot be created through `POST /api/users`.
@@ -235,6 +237,13 @@ and returns an `ApiResponse<EnhanceDescriptionResponseDto>`:
 Input rules: 20-4,000 characters, optional title (200) and context (500). Timeout 20s with one retry; if the provider
 fails twice the service returns a deterministic local suggestion (`usedFallback: true`, `model: "fallback"`) so the UI
 never breaks. Prompt design, examples and safety notes are documented in `PROMPTS.md`.
+
+Every successful provider call is persisted to `AiInteractionLogs` (caller id/email/name/role, model, full prompt,
+raw output, duration). Fallback results are never logged, so the admin-only `GET /api/ailogs/paged` list and the
+`/ai-logs` screen only show real model calls. AI suggestions are stored on the task itself in dedicated columns
+(`AiSuggestedDescription`, `AiSuggestedTitle`, `AiModel`) while `AiSuggestionJson` keeps acceptance criteria, subtasks,
+suggested priority and the hour estimate; the task modal edits the suggestion in its own input, separate from the
+task description.
 
 ## Seeded Users
 

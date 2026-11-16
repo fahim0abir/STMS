@@ -62,6 +62,7 @@ export class TasksComponent {
   readonly pendingOnly = signal(false);
   readonly projectFilter = signal<string | undefined>(undefined);
   readonly dueFrom = signal('');
+  readonly dueFromInstant = signal<string | null>(null);
   readonly dueTo = signal('');
 
   readonly canManage = this.authService.hasRole('Admin', 'ProjectManager');
@@ -131,6 +132,7 @@ export class TasksComponent {
     }
     const dueFrom = params.get('dueFrom');
     if (dueFrom) {
+      this.dueFromInstant.set(dueFrom === 'now' ? new Date().toISOString() : null);
       this.dueFrom.set(dueFrom === 'now' ? new Date().toISOString().slice(0, 10) : dueFrom);
     }
     if (params.get('pending') === '1') {
@@ -195,6 +197,7 @@ export class TasksComponent {
   }
 
   onDueFromChange(event: Event): void {
+    this.dueFromInstant.set(null);
     this.dueFrom.set((event.target as HTMLInputElement).value);
     this.pageNumber.set(1);
     this.load();
@@ -281,7 +284,7 @@ export class TasksComponent {
       projectId: this.projectFilter(),
       pendingOnly: this.pendingOnly() || undefined,
       assigneeId: this.mineOnly() ? this.authService.currentUserValue?.id : undefined,
-      dueFrom: this.toIsoStart(this.dueFrom()),
+      dueFrom: this.dueFromInstant() ?? this.toIsoStart(this.dueFrom()),
       dueTo: this.toIsoEnd(this.dueTo()),
       sortBy: this.sortBy(),
       sortOrder: this.sortOrder(),
@@ -349,7 +352,9 @@ export class TasksComponent {
   }
 
   private toIsoStart(value: string): string | undefined {
-    return value ? new Date(value + 'T00:00:00').toISOString() : undefined;
+    if (!value) return undefined;
+    const date = new Date(value.includes('T') ? value : `${value}T00:00:00`);
+    return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
   }
 
   private toIsoEnd(value: string): string | undefined {

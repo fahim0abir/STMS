@@ -7,11 +7,13 @@ import { TasksService } from '../../core/services/tasks.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { DashboardStats } from '../../shared/models/dashboard.model';
 import { TaskItem } from '../../shared/models/task.model';
+import { TaskStatus } from '../../shared/models/enums';
 import { SpinnerComponent } from '../../shared/ui/spinner.component';
 import { KpiCardComponent } from './components/kpi-card/kpi-card.component';
 import { StatBreakdownComponent, BreakdownRow } from './components/stat-breakdown/stat-breakdown.component';
 import { UpcomingDueListComponent } from './components/upcoming-due-list/upcoming-due-list.component';
 import { CompletionRingComponent } from './components/completion-ring/completion-ring.component';
+import { TaskBoardComponent } from './components/task-board/task-board.component';
 
 const STATUS_LABELS: Record<string, string> = {
   ToDo: 'To Do',
@@ -43,6 +45,7 @@ const PRIORITY_COLORS: Record<string, string> = {
     StatBreakdownComponent,
     UpcomingDueListComponent,
     CompletionRingComponent,
+    TaskBoardComponent,
   ],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
@@ -54,15 +57,22 @@ export class DashboardComponent {
   private readonly authService = inject(AuthService);
 
   readonly canViewProjects = this.authService.hasRole('Admin', 'ProjectManager');
+  readonly currentUserId = this.authService.currentUserValue?.id ?? '';
+  readonly boardAssigneeId: string | undefined = this.authService.hasRole('TeamMember')
+    ? this.currentUserId
+    : undefined;
 
   readonly completedQuery: Params = { status: 'Completed' };
   readonly pendingQuery: Params = { pending: '1' };
-  readonly dueSoonQuery: Params = { dueFrom: 'now', sortBy: 'DueAt' };
+  readonly dueSoonQuery: Params = { dueFrom: 'now', pending: '1', sortBy: 'DueAt' };
 
   readonly loading = signal(true);
   readonly error = signal('');
   readonly stats = signal<DashboardStats | null>(null);
   readonly upcoming = signal<TaskItem[]>([]);
+  readonly myTasks = signal<TaskItem[]>([]);
+  readonly boardBusyId = signal<string | null>(null);
+  readonly boardError = signal('');
 
   readonly statusRows = computed<BreakdownRow[]>(() => this.toRows(this.stats()?.tasksByStatus, STATUS_LABELS, STATUS_COLORS));
   readonly priorityRows = computed<BreakdownRow[]>(() => this.toRows(this.stats()?.tasksByPriority, STATUS_LABELS, PRIORITY_COLORS));
@@ -71,15 +81,23 @@ export class DashboardComponent {
     this.load();
   }
 
-  load(): void {
-    this.loading.set(true);
+  load(silent = false): void {
+    if (!silent) this.loading.set(true);
     this.error.set('');
 
     const dueFrom = new Date().toISOString();
     forkJoin({
+      myTasks: this.tasksService.getPaged({
+        assigneeId: this.boardAssigneeId,
+        sortBy: 'DueAt',
+        sortOrder: 'asc',
+        pageNumber: 1,
+        pageSize: 50,
+      }),
       stats: this.dashboardService.getStats(),
       upcoming: this.tasksService.getPaged({
         dueFrom,
+        pendingOnly: true,
         sortBy: 'DueAt',
         sortOrder: 'asc',
         pageNumber: 1,
@@ -88,14 +106,36 @@ export class DashboardComponent {
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: ({ stats, upcoming }) => {
+        next: ({ stats, upcoming, myTasks }) => {
           this.stats.set(stats);
           this.upcoming.set(upcoming.items);
+          this.myTasks.set(myTasks.items);
           this.loading.set(false);
         },
         error: (err) => {
           this.error.set(err?.error?.message || 'Failed to load dashboard.');
           this.loading.set(false);
+        },
+      });
+  }
+
+  onBoardStatusChange(event: { task: TaskItem; status: TaskStatus }): void {
+    if (this.boardBusyId()) return;
+
+    this.boardBusyId.set(event.task.id);
+    this.boardError.set('');
+
+    this.tasksService
+      .updateStatus(event.task.id, event.status)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.boardBusyId.set(null);
+          this.load(true);
+        },
+        error: (err) => {
+          this.boardBusyId.set(null);
+          this.boardError.set(err?.error?.message || 'Failed to update task status.');
         },
       });
   }

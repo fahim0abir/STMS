@@ -33,6 +33,11 @@ export const routes: Routes = [
         canMatch: [roleGuard(['Admin'])],
       },
       {
+        path: 'ai-logs',
+        loadComponent: () => import('./features/ai-logs/ai-logs.component').then((m) => m.AiLogsComponent),
+        canMatch: [roleGuard(['Admin'])],
+      },
+      {
         path: 'profile',
         loadComponent: () => import('./features/profile/profile.component').then((m) => m.ProfileComponent),
       },

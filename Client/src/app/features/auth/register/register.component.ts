@@ -4,6 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../../core/auth/auth.service';
 import { passwordsMatch } from '../../../shared/passwords-match.validator';
+import { uniqueEmail } from '../../../shared/unique-email.validator';
 import { PasswordToggleComponent } from '../../../shared/ui/password-toggle.component';
 
 @Component({
@@ -27,7 +28,7 @@ export class RegisterComponent {
   readonly form = this.fb.group(
     {
       name: ['', Validators.required],
-      email: ['', [Validators.required, Validators.email]],
+      email: ['', [Validators.required, Validators.email], uniqueEmail(this.authService)],
       password: ['', [Validators.required, Validators.minLength(8)]],
       confirmPassword: ['', Validators.required],
     },

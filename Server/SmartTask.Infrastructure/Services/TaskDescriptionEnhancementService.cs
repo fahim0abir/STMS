@@ -52,13 +52,18 @@ public class TaskDescriptionEnhancementService : ITaskDescriptionEnhancementServ
 
     private readonly Client? _client;
     private readonly ILogger<TaskDescriptionEnhancementService> _logger;
+    private readonly IAiInteractionLogService _interactionLogs;
     private readonly bool _isConfigured;
     private readonly string _model;
     private readonly double _temperature;
 
-    public TaskDescriptionEnhancementService(IConfiguration configuration, ILogger<TaskDescriptionEnhancementService> logger)
+    public TaskDescriptionEnhancementService(
+        IConfiguration configuration,
+        ILogger<TaskDescriptionEnhancementService> logger,
+        IAiInteractionLogService interactionLogs)
     {
         _logger = logger;
+        _interactionLogs = interactionLogs;
 
         // Google AI Studio keys live in user-secrets. A missing or placeholder key disables the provider
         // entirely so the deterministic fallback is used without a network round-trip.
@@ -86,8 +91,9 @@ public class TaskDescriptionEnhancementService : ITaskDescriptionEnhancementServ
         }
     }
 
-    public async Task<EnhanceDescriptionResponseDto> EnhanceAsync(EnhanceDescriptionRequestDto request, CancellationToken cancellationToken = default)
+    public async Task<EnhanceDescriptionResponseDto> EnhanceAsync(EnhanceDescriptionRequestDto request, AiRequestContext context, CancellationToken cancellationToken = default)
     {
+        var startedAt = DateTime.UtcNow;
         var description = (request.Description ?? string.Empty).Trim();
         if (description.Length < 20 || description.Length > 4000)
         {
@@ -111,6 +117,7 @@ public class TaskDescriptionEnhancementService : ITaskDescriptionEnhancementServ
                 if (parsed is not null)
                 {
                     _logger.LogInformation("AI enhancement succeeded with {Model} on attempt {Attempt}.", _model, attempt);
+                    await LogSuccessAsync(context, description, userContent, raw, startedAt, cancellationToken);
                     return parsed;
                 }
 
@@ -137,6 +144,37 @@ public class TaskDescriptionEnhancementService : ITaskDescriptionEnhancementServ
 
         _logger.LogWarning("AI enhancement fell back to the local generator after {MaxAttempts} attempt(s).", MaxAttempts);
         return BuildFallback(request);
+    }
+
+    private async Task LogSuccessAsync(
+        AiRequestContext context,
+        string description,
+        string userContent,
+        string rawOutput,
+        DateTime startedAt,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _interactionLogs.LogSuccessAsync(new AiInteractionLogCreateDto
+            {
+                UserId = context?.UserId,
+                UserEmail = context?.UserEmail ?? string.Empty,
+                UserName = context?.UserName,
+                UserRole = context?.UserRole ?? string.Empty,
+                TaskId = context?.TaskId,
+                Model = _model,
+                Prompt = $"{SystemPrompt}{System.Environment.NewLine}{System.Environment.NewLine}{userContent}",
+                InputText = description,
+                OutputJson = rawOutput,
+                DurationMs = (int)Math.Min(int.MaxValue, (DateTime.UtcNow - startedAt).TotalMilliseconds)
+            }, cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            // Auditing must never break the user request.
+            _logger.LogWarning(exception, "AI interaction log could not be persisted.");
+        }
     }
 
     private static string BuildUserContent(EnhanceDescriptionRequestDto request, string description)

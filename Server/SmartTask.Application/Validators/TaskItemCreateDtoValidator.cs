@@ -12,6 +12,9 @@ public class TaskItemCreateDtoValidator : AbstractValidator<TaskItemCreateDto>
         RuleFor(x => x.Status).IsInEnum();
         RuleFor(x => x.Priority).IsInEnum();
         RuleFor(x => x.AiSuggestionJson).MaximumLength(8000);
+        RuleFor(x => x.AiSuggestedDescription).MaximumLength(4000);
+        RuleFor(x => x.AiSuggestedTitle).MaximumLength(200);
+        RuleFor(x => x.AiModel).MaximumLength(100);
         RuleFor(x => x.DueAt)
             .Must(due => due!.Value > DateTime.UtcNow.AddYears(-1))
             .When(x => x.DueAt.HasValue)

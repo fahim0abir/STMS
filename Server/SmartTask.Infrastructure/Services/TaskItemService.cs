@@ -43,6 +43,9 @@ public class TaskItemService : ITaskItemService
             AssigneeId = createDto.AssigneeId,
             DueAt = createDto.DueAt,
             AiSuggestionJson = createDto.AiSuggestionJson,
+            AiSuggestedDescription = createDto.AiSuggestedDescription,
+            AiSuggestedTitle = createDto.AiSuggestedTitle,
+            AiModel = createDto.AiModel,
             CreatedAt = DateTime.UtcNow
         };
         await _taskRepository.AddAsync(taskItem);
@@ -80,6 +83,9 @@ public class TaskItemService : ITaskItemService
                 AssigneeName = t.Assignee != null ? t.Assignee.Name : null,
                 DueAt = t.DueAt,
                 AiSuggestionJson = t.AiSuggestionJson,
+                AiSuggestedDescription = t.AiSuggestedDescription,
+                AiSuggestedTitle = t.AiSuggestedTitle,
+                AiModel = t.AiModel,
                 CreatedAt = t.CreatedAt,
                 UpdatedAt = t.UpdatedAt
             })
@@ -124,6 +130,9 @@ public class TaskItemService : ITaskItemService
             AssigneeId = t.AssigneeId,
             DueAt = t.DueAt,
             AiSuggestionJson = t.AiSuggestionJson,
+            AiSuggestedDescription = t.AiSuggestedDescription,
+            AiSuggestedTitle = t.AiSuggestedTitle,
+            AiModel = t.AiModel,
             CreatedAt = t.CreatedAt,
             UpdatedAt = t.UpdatedAt
         });
@@ -150,6 +159,9 @@ public class TaskItemService : ITaskItemService
         taskItem.AssigneeId = createDto.AssigneeId;
         taskItem.DueAt = createDto.DueAt;
         taskItem.AiSuggestionJson = createDto.AiSuggestionJson;
+        taskItem.AiSuggestedDescription = createDto.AiSuggestedDescription;
+        taskItem.AiSuggestedTitle = createDto.AiSuggestedTitle;
+        taskItem.AiModel = createDto.AiModel;
         taskItem.UpdatedAt = DateTime.UtcNow;
         await _taskRepository.SaveChangesAsync();
     }
@@ -228,6 +240,9 @@ public class TaskItemService : ITaskItemService
         AssigneeName = assignee?.Name,
         DueAt = t.DueAt,
         AiSuggestionJson = t.AiSuggestionJson,
+        AiSuggestedDescription = t.AiSuggestedDescription,
+        AiSuggestedTitle = t.AiSuggestedTitle,
+        AiModel = t.AiModel,
         CreatedAt = t.CreatedAt,
         UpdatedAt = t.UpdatedAt
     };

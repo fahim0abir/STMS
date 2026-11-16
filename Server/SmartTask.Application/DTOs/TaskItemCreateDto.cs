@@ -12,4 +12,7 @@ public record TaskItemCreateDto
     public Guid? AssigneeId { get; init; }
     public DateTime? DueAt { get; init; }
     public string? AiSuggestionJson { get; init; }
+    public string? AiSuggestedDescription { get; init; }
+    public string? AiSuggestedTitle { get; init; }
+    public string? AiModel { get; init; }
 };

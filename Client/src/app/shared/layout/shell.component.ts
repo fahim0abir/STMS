@@ -23,6 +23,7 @@ export class ShellComponent {
     { path: '/projects', label: 'Projects', roles: ['Admin', 'ProjectManager'] },
     { path: '/tasks', label: 'Tasks', roles: ['Admin', 'ProjectManager', 'TeamMember'] },
     { path: '/users', label: 'Users', roles: ['Admin'] },
+    { path: '/ai-logs', label: 'AI Logs', roles: ['Admin'] },
     { path: '/profile', label: 'Profile', roles: ['Admin', 'ProjectManager', 'TeamMember'] },
   ];
 

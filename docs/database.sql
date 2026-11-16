@@ -293,6 +293,86 @@ BEGIN
     VALUES (N'20261116020959_AddProjectPlanningFieldsAndAiSuggestion', N'9.0.10');
 END;
 
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261116144314_AddAiCallLogsAndAiSuggestionColumns'
+)
+BEGIN
+    ALTER TABLE [TaskItems] ADD [AiModel] nvarchar(100) NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261116144314_AddAiCallLogsAndAiSuggestionColumns'
+)
+BEGIN
+    ALTER TABLE [TaskItems] ADD [AiSuggestedDescription] nvarchar(max) NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261116144314_AddAiCallLogsAndAiSuggestionColumns'
+)
+BEGIN
+    ALTER TABLE [TaskItems] ADD [AiSuggestedTitle] nvarchar(200) NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261116144314_AddAiCallLogsAndAiSuggestionColumns'
+)
+BEGIN
+    CREATE TABLE [AiInteractionLogs] (
+        [Id] uniqueidentifier NOT NULL,
+        [UserId] uniqueidentifier NULL,
+        [UserEmail] nvarchar(256) NOT NULL,
+        [UserName] nvarchar(100) NULL,
+        [UserRole] nvarchar(50) NOT NULL,
+        [TaskId] uniqueidentifier NULL,
+        [Model] nvarchar(100) NOT NULL,
+        [Prompt] nvarchar(max) NOT NULL,
+        [InputText] nvarchar(max) NOT NULL,
+        [OutputJson] nvarchar(max) NOT NULL,
+        [DurationMs] int NOT NULL,
+        [CreatedAt] datetime2 NOT NULL,
+        CONSTRAINT [PK_AiInteractionLogs] PRIMARY KEY ([Id])
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261116144314_AddAiCallLogsAndAiSuggestionColumns'
+)
+BEGIN
+    CREATE INDEX [IX_AiInteractionLogs_CreatedAt] ON [AiInteractionLogs] ([CreatedAt]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261116144314_AddAiCallLogsAndAiSuggestionColumns'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261116144314_AddAiCallLogsAndAiSuggestionColumns', N'9.0.10');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261116145813_AddUniqueUserEmailIndex'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_Users_Email] ON [Users] ([Email]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261116145813_AddUniqueUserEmailIndex'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261116145813_AddUniqueUserEmailIndex', N'9.0.10');
+END;
+
 COMMIT;
 GO
 

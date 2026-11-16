@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using SmartTask.Application.DTOs;
 using SmartTask.Application.DTOs.Auth;
 using SmartTask.Application.Interfaces;
@@ -22,6 +23,15 @@ public class AuthController : ControllerBase
     {
         var user = await _authService.RegisterAsync(registerDto);
         return Ok(ApiResponse<UserDto>.Ok(user, "User registered successfully."));
+    }
+
+    [HttpGet("email-availability")]
+    [AllowAnonymous]
+    [EnableRateLimiting("default")]
+    public async Task<ActionResult<ApiResponse<EmailAvailabilityDto>>> CheckEmailAvailabilityAsync([FromQuery] string? email)
+    {
+        var available = await _authService.IsEmailAvailableAsync(email ?? string.Empty);
+        return Ok(ApiResponse<EmailAvailabilityDto>.Ok(new EmailAvailabilityDto { Available = available }));
     }
 
     [HttpPost("login")]

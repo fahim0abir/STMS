@@ -48,7 +48,7 @@ public class TasksController : ControllerBase
 
         try
         {
-            var result = await _enhancementService.EnhanceAsync(request, cancellationToken);
+            var result = await _enhancementService.EnhanceAsync(request, BuildAiContext(), cancellationToken);
             var message = result.UsedFallback
                 ? "Description enhanced with the local fallback (AI provider unavailable)."
                 : "Description enhanced.";
@@ -58,5 +58,17 @@ public class TasksController : ControllerBase
         {
             return StatusCode(StatusCodes.Status504GatewayTimeout, ApiResponse<EnhanceDescriptionResponseDto>.Error("The AI provider did not respond in time. Please retry.", 504));
         }
+    }
+
+    private AiRequestContext BuildAiContext()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        return new AiRequestContext
+        {
+            UserId = Guid.TryParse(userId, out var parsedUserId) ? parsedUserId : null,
+            UserEmail = User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue("email") ?? string.Empty,
+            UserName = User.FindFirstValue(ClaimTypes.Name),
+            UserRole = User.FindFirstValue(ClaimTypes.Role) ?? string.Empty
+        };
     }
 }

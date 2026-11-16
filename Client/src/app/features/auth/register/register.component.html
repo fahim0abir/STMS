@@ -3,8 +3,8 @@
     <h2>Register</h2>
     <input formControlName="name" placeholder="Full name" />
     <input formControlName="email" placeholder="Email" type="email" />
-    @if (form.get('email')?.invalid && form.get('email')?.touched) {
-      <div class="hint">Enter a valid email</div>
+    @if (form.get('email')?.hasError('emailTaken') && form.get('email')?.touched) {
+      <div class="hint">This email is already registered</div>
     }
     <div class="password-field">
       <input formControlName="password" placeholder="Password" autocomplete="new-password" [type]="showPassword() ? 'text' : 'password'" />
@@ -20,7 +20,7 @@
     @if (error()) {
       <div class="error">{{ error() }}</div>
     }
-    <button type="submit" [disabled]="isLoading()">{{ isLoading() ? 'Creating account...' : 'Register' }}</button>
+    <button type="submit" [disabled]="isLoading() || form.pending">{{ isLoading() ? 'Creating account...' : 'Register' }}</button>
     <p class="link">Already have an account? <a routerLink="/login">Login</a></p>
   </form>
 </div>

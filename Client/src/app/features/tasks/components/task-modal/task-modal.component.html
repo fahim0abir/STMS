@@ -45,6 +45,31 @@
         </small>
       </label>
 
+      <label class="modal__field modal__field--ai">
+        <span>
+          AI suggestion
+          @if (aiModel(); as model) {
+            <em class="modal__hint"> · {{ model }}</em>
+          }
+        </span>
+        <input
+          type="text"
+          formControlName="aiSuggestedTitle"
+          maxlength="200"
+          placeholder="AI suggested title"
+        />
+        <textarea
+          formControlName="aiSuggestedDescription"
+          rows="4"
+          [attr.maxlength]="maxDescriptionLength"
+          placeholder="Run “Improve with AI” to fill this in, or write your own note."
+        ></textarea>
+        <small class="modal__hint">
+          Stored in its own task field ·
+          {{ form.controls.aiSuggestedDescription.value.length }}/{{ maxDescriptionLength }}
+        </small>
+      </label>
+
       <div class="modal__ai">
         <app-btn size="sm" variant="outline" [loading]="aiLoading()" (click)="improveWithAi()">
           Improve with AI
@@ -82,11 +107,6 @@
               }
             </span>
           </div>
-          @if (suggestion.suggestedTitle) {
-            <p class="modal__suggestion-title">
-              <strong>Title:</strong> {{ suggestion.suggestedTitle }}
-            </p>
-          }
           <p class="modal__suggestion-text">{{ suggestion.enhancedDescription }}</p>
           @if (suggestion.acceptanceCriteria.length) {
             <div class="modal__suggestion-list">
@@ -109,8 +129,10 @@
             </div>
           }
           <div class="modal__suggestion-actions">
-            <app-btn size="sm" variant="primary" (click)="acceptSuggestion()">Accept</app-btn>
-            <app-btn size="sm" variant="ghost" (click)="rejectSuggestion()">Reject</app-btn>
+            <app-btn size="sm" variant="primary" (click)="acceptSuggestion()">
+              Copy into description
+            </app-btn>
+            <app-btn size="sm" variant="ghost" (click)="rejectSuggestion()">Discard</app-btn>
           </div>
         </div>
       }

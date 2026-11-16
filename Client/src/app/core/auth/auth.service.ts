@@ -44,6 +44,14 @@ export class AuthService {
       .pipe(map((res) => normalizeUser(res.data)));
   }
 
+  isEmailAvailable(email: string): Observable<boolean> {
+    return this.http
+      .get<ApiResponse<{ available: boolean }>>(`${this.apiUrl}/email-availability`, {
+        params: { email },
+      })
+      .pipe(map((res) => res.data?.available ?? true));
+  }
+
   refreshToken(): Observable<User> {
     const refreshToken = this.tokenService.getRefreshToken();
     if (!refreshToken) {

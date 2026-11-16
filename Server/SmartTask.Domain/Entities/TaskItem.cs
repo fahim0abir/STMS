@@ -18,4 +18,7 @@ public class TaskItem
     public DateTime? UpdatedAt { get; set; }
     public DateTime? DueAt { get; set; }
     public string? AiSuggestionJson { get; set; }
+    public string? AiSuggestedDescription { get; set; }
+    public string? AiSuggestedTitle { get; set; }
+    public string? AiModel { get; set; }
 }
