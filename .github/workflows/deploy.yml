@@ -98,10 +98,10 @@ jobs:
           }
 
           # Convert the JSON environment variable string into a native PowerShell string array (list of strings)
-          $allowedOriginsList = @($env:CORS_ALLOWED_ORIGINS | ConvertFrom-Json)
+          $allowedOriginsArray = [string[]]($env:CORS_ALLOWED_ORIGINS | ConvertFrom-Json)
 
           # Inject or update the AllowedOrigins property securely from the GitHub secret
-          $json.CORS | Add-Member -NotePropertyName 'AllowedOrigins' -NotePropertyValue $env:CORS_ALLOWED_ORIGINS -Force
+          $json.CORS | Add-Member -NotePropertyName 'AllowedOrigins' -NotePropertyValue $allowedOriginsArray -Force
 
           # Save back to appsettings.json
           $json | ConvertTo-Json -Depth 10 | Set-Content $filePath
