@@ -16,6 +16,10 @@ public class TaskItemQueryDtoValidator : AbstractValidator<TaskItemQueryDto>
         RuleFor(x => x.SortBy)
             .Must((dto, sortBy) => string.IsNullOrWhiteSpace(sortBy) || TaskItemQueryDto.AllowedSortFields.Contains(sortBy.Trim()))
             .WithMessage($"SortBy must be one of: {string.Join(", ", TaskItemQueryDto.AllowedSortFields)}.");
+        RuleFor(x => x.ProjectId)
+            .Must(projectId => projectId!.Value != Guid.Empty)
+            .When(x => x.ProjectId.HasValue)
+            .WithMessage("ProjectId is invalid.");
         RuleFor(x => x.DueTo)
             .GreaterThanOrEqualTo(x => x.DueFrom)
             .When(x => x.DueFrom.HasValue && x.DueTo.HasValue)

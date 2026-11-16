@@ -80,6 +80,7 @@ builder.Services.AddScoped<ITaskItemService, TaskItemService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<ITaskDescriptionEnhancementService, TaskDescriptionEnhancementService>();
 builder.Services.AddScoped<IValidator<ProjectQueryDto>, ProjectQueryDtoValidator>();
+builder.Services.AddScoped<IValidator<ProjectCreateDto>, ProjectCreateDtoValidator>();
 builder.Services.AddScoped<IValidator<TaskItemQueryDto>, TaskItemQueryDtoValidator>();
 builder.Services.AddScoped<IValidator<EnhanceDescriptionRequestDto>, EnhanceDescriptionRequestDtoValidator>();
 builder.Services.AddScoped<IUserService, UserService>();

@@ -46,9 +46,9 @@ export class ProjectsComponent {
   readonly sortBy = signal('Name');
   readonly sortOrder = signal<'asc' | 'desc'>('asc');
   readonly search = signal('');
+  readonly includeArchived = signal(false);
 
   readonly canManage = this.authService.hasRole('Admin', 'ProjectManager');
-  readonly canDelete = this.authService.hasRole('Admin');
   readonly canAssignManager = this.authService.hasRole('Admin');
 
   readonly modalOpen = signal(false);
@@ -58,6 +58,7 @@ export class ProjectsComponent {
 
   readonly sortOptions: SortOption[] = [
     { value: 'Name', label: 'Name' },
+    { value: 'StartDate', label: 'Start date' },
     { value: 'CreatedAt', label: 'Created' },
   ];
 
@@ -170,18 +171,28 @@ export class ProjectsComponent {
       });
   }
 
-  remove(project: Project): void {
-    if (!this.canDelete) return;
-    if (!confirm(`Delete project "${project.name}"?`)) return;
+  onIncludeArchivedChange(event: Event): void {
+    this.includeArchived.set((event.target as HTMLInputElement).checked);
+    this.pageNumber.set(1);
+    this.load();
+  }
 
-    this.projectsService.delete(project.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => {
-        if (this.projects().length === 1 && this.pageNumber() > 1) {
-          this.pageNumber.update((p) => p - 1);
-        }
-        this.load();
-      },
-      error: (err) => this.error.set(err?.error?.message || 'Failed to delete project.'),
+  archive(project: Project): void {
+    if (!this.canManage) return;
+    if (!confirm(`Archive project "${project.name}"? It will be hidden from active lists.`)) return;
+
+    this.projectsService.archive(project.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => this.load(),
+      error: (err) => this.error.set(err?.error?.message || 'Failed to archive project.'),
+    });
+  }
+
+  restore(project: Project): void {
+    if (!this.canManage) return;
+
+    this.projectsService.unarchive(project.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => this.load(),
+      error: (err) => this.error.set(err?.error?.message || 'Failed to restore project.'),
     });
   }
 
@@ -191,6 +202,7 @@ export class ProjectsComponent {
     this.projectsService
       .getPaged({
         keyword: this.search() || undefined,
+        includeArchived: this.includeArchived() || undefined,
         sortBy: this.sortBy(),
         sortOrder: this.sortOrder(),
         pageNumber: this.pageNumber(),

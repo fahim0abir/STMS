@@ -192,6 +192,107 @@ BEGIN
     VALUES (N'20261114115912_AssignProjectManager', N'9.0.10');
 END;
 
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261116020959_AddProjectPlanningFieldsAndAiSuggestion'
+)
+BEGIN
+    DECLARE @var sysname;
+    SELECT @var = [d].[name]
+    FROM [sys].[default_constraints] [d]
+    INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+    WHERE ([d].[parent_object_id] = OBJECT_ID(N'[TaskItems]') AND [c].[name] = N'Description');
+    IF @var IS NOT NULL EXEC(N'ALTER TABLE [TaskItems] DROP CONSTRAINT [' + @var + '];');
+    ALTER TABLE [TaskItems] ALTER COLUMN [Description] nvarchar(4000) NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261116020959_AddProjectPlanningFieldsAndAiSuggestion'
+)
+BEGIN
+    ALTER TABLE [TaskItems] ADD [AiSuggestionJson] nvarchar(max) NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261116020959_AddProjectPlanningFieldsAndAiSuggestion'
+)
+BEGIN
+    DECLARE @var1 sysname;
+    SELECT @var1 = [d].[name]
+    FROM [sys].[default_constraints] [d]
+    INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+    WHERE ([d].[parent_object_id] = OBJECT_ID(N'[Projects]') AND [c].[name] = N'Name');
+    IF @var1 IS NOT NULL EXEC(N'ALTER TABLE [Projects] DROP CONSTRAINT [' + @var1 + '];');
+    ALTER TABLE [Projects] ALTER COLUMN [Name] nvarchar(200) NOT NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261116020959_AddProjectPlanningFieldsAndAiSuggestion'
+)
+BEGIN
+    ALTER TABLE [Projects] ADD [ClientName] nvarchar(200) NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261116020959_AddProjectPlanningFieldsAndAiSuggestion'
+)
+BEGIN
+    ALTER TABLE [Projects] ADD [EndDate] datetime2 NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261116020959_AddProjectPlanningFieldsAndAiSuggestion'
+)
+BEGIN
+    ALTER TABLE [Projects] ADD [StartDate] datetime2 NOT NULL DEFAULT '0001-01-01T00:00:00.0000000';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261116020959_AddProjectPlanningFieldsAndAiSuggestion'
+)
+BEGIN
+    ALTER TABLE [Projects] ADD [Status] int NOT NULL DEFAULT 0;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261116020959_AddProjectPlanningFieldsAndAiSuggestion'
+)
+BEGIN
+    ALTER TABLE [Projects] ADD [TechStack] nvarchar(200) NOT NULL DEFAULT N'';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261116020959_AddProjectPlanningFieldsAndAiSuggestion'
+)
+BEGIN
+    UPDATE [Projects] SET [StartDate] = [CreatedAt] WHERE [StartDate] < '1900-01-01';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261116020959_AddProjectPlanningFieldsAndAiSuggestion'
+)
+BEGIN
+    UPDATE [Projects] SET [TechStack] = N'Not specified' WHERE LTRIM(RTRIM([TechStack])) = N'';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261116020959_AddProjectPlanningFieldsAndAiSuggestion'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261116020959_AddProjectPlanningFieldsAndAiSuggestion', N'9.0.10');
+END;
+
 COMMIT;
 GO
 

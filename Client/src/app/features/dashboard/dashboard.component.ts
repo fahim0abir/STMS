@@ -3,6 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { forkJoin } from 'rxjs';
 import { DashboardService } from '../../core/services/dashboard.service';
 import { TasksService } from '../../core/services/tasks.service';
+import { AuthService } from '../../core/auth/auth.service';
 import { DashboardStats } from '../../shared/models/dashboard.model';
 import { TaskItem } from '../../shared/models/task.model';
 import { SpinnerComponent } from '../../shared/ui/spinner.component';
@@ -49,6 +50,9 @@ export class DashboardComponent {
   private readonly dashboardService = inject(DashboardService);
   private readonly tasksService = inject(TasksService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly authService = inject(AuthService);
+
+  readonly canViewProjects = this.authService.hasRole('Admin', 'ProjectManager');
 
   readonly loading = signal(true);
   readonly error = signal('');

@@ -1,6 +1,6 @@
 ﻿import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, inject } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Project, ProjectUpsert } from '../../../../shared/models/project.model';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { PROJECT_STATUS_LABELS, Project, ProjectStatus, ProjectUpsert } from '../../../../shared/models/project.model';
 import { User } from '../../../../shared/models/user.model';
 import { ButtonComponent } from '../../../../shared/ui/button.component';
 
@@ -30,6 +30,49 @@ import { ButtonComponent } from '../../../../shared/ui/button.component';
             @if (form.controls.description.touched && form.controls.description.invalid) {
               <small class="modal__error">Description must be at most 1000 characters.</small>
             }
+          </label>
+
+          <div class="modal__row">
+            <label class="modal__field">
+              <span>Start date *</span>
+              <input type="date" formControlName="startDate" />
+              @if (form.controls.startDate.touched && form.controls.startDate.invalid) {
+                <small class="modal__error">Start date is required.</small>
+              }
+            </label>
+
+            <label class="modal__field">
+              <span>End date</span>
+              <input type="date" formControlName="endDate" />
+              @if (form.hasError('dateRange') && form.controls.endDate.touched) {
+                <small class="modal__error">End date must be on or after the start date.</small>
+              }
+            </label>
+          </div>
+
+          <label class="modal__field">
+            <span>Tech stack *</span>
+            <input type="text" formControlName="techStack" maxlength="200" placeholder="e.g. Angular 18, ASP.NET Core 9, MSSQL" />
+            @if (form.controls.techStack.touched && form.controls.techStack.invalid) {
+              <small class="modal__error">Tech stack is required (max 200 characters).</small>
+            }
+          </label>
+
+          <label class="modal__field">
+            <span>Client</span>
+            <input type="text" formControlName="clientName" maxlength="200" />
+            @if (form.controls.clientName.touched && form.controls.clientName.invalid) {
+              <small class="modal__error">Client name must be at most 200 characters.</small>
+            }
+          </label>
+
+          <label class="modal__field">
+            <span>Status *</span>
+            <select formControlName="status">
+              @for (option of statusOptions; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
           </label>
 
           @if (canAssignManager) {
@@ -67,6 +110,8 @@ import { ButtonComponent } from '../../../../shared/ui/button.component';
       .modal__panel { position: relative; background: #fff; border-radius: 0.75rem; padding: 1.5rem; width: 100%; max-width: 480px; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.2); }
       .modal__title { margin: 0 0 1rem; font-size: 1.125rem; font-weight: 600; color: #111827; }
       .modal__form { display: flex; flex-direction: column; gap: 1rem; }
+      .modal__row { display: flex; gap: 0.75rem; }
+      .modal__row .modal__field { flex: 1; }
       .modal__field { display: flex; flex-direction: column; gap: 0.375rem; font-size: 0.8rem; color: #374151; }
       .modal__field input, .modal__field textarea, .modal__field select {
         border: 1px solid #d1d5db;
@@ -96,17 +141,39 @@ export class ProjectModalComponent implements OnChanges {
   @Output() close = new EventEmitter<void>();
   @Output() save = new EventEmitter<ProjectUpsert>();
 
-  readonly form = this.fb.nonNullable.group({
-    name: ['', [Validators.required, Validators.maxLength(200)]],
-    description: ['', [Validators.maxLength(1000)]],
-    managerId: [''],
-  });
+  readonly statusOptions = Object.entries(PROJECT_STATUS_LABELS).map(([value, label]) => ({ value, label }));
+
+  private readonly dateRangeValidator = (group: AbstractControl) => {
+    const start = group.get('startDate')?.value;
+    const end = group.get('endDate')?.value;
+    if (!start || !end) return null;
+    return new Date(end) >= new Date(start) ? null : { dateRange: true };
+  };
+
+  readonly form = this.fb.nonNullable.group(
+    {
+      name: ['', [Validators.required, Validators.maxLength(200)]],
+      description: ['', [Validators.maxLength(1000)]],
+      startDate: ['', [Validators.required]],
+      endDate: [''],
+      techStack: ['', [Validators.required, Validators.maxLength(200)]],
+      clientName: ['', [Validators.maxLength(200)]],
+      status: [String(ProjectStatus.Active), [Validators.required]],
+      managerId: [''],
+    },
+    { validators: this.dateRangeValidator },
+  );
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['open']?.currentValue === true || changes['project']) {
       this.form.reset({
         name: this.project?.name ?? '',
         description: this.project?.description ?? '',
+        startDate: this.toDateInput(this.project?.startDate),
+        endDate: this.toDateInput(this.project?.endDate),
+        techStack: this.project?.techStack ?? '',
+        clientName: this.project?.clientName ?? '',
+        status: String(this.project?.status ?? ProjectStatus.Active),
         managerId: this.project?.managerId ?? '',
       });
     }
@@ -122,8 +189,19 @@ export class ProjectModalComponent implements OnChanges {
     this.save.emit({
       name: raw.name.trim(),
       description: raw.description?.trim() || null,
+      startDate: new Date(raw.startDate).toISOString(),
+      endDate: raw.endDate ? new Date(raw.endDate).toISOString() : null,
+      techStack: raw.techStack.trim(),
+      clientName: raw.clientName?.trim() || null,
+      status: Number(raw.status) as ProjectStatus,
       managerId: this.canAssignManager && raw.managerId ? raw.managerId : null,
     });
+  }
+
+  private toDateInput(value?: string | null): string {
+    if (!value) return '';
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString().slice(0, 10);
   }
 }
 

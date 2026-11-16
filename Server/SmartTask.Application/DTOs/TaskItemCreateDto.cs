@@ -11,4 +11,5 @@ public record TaskItemCreateDto
     public TaskPriority Priority { get; init; }
     public Guid? AssigneeId { get; init; }
     public DateTime? DueAt { get; init; }
+    public string? AiSuggestionJson { get; init; }
 };

@@ -13,6 +13,8 @@ public class TaskItemQueryDto
     public string? Keyword { get; init; }
     public TaskStatus? Status { get; init; }
     public TaskPriority? Priority { get; init; }
+    public Guid? ProjectId { get; init; }
+    public bool PendingOnly { get; init; }
     public Guid? AssigneeId { get; init; }
     public DateTime? DueFrom { get; init; }
     public DateTime? DueTo { get; init; }

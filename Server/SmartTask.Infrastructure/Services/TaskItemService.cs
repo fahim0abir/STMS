@@ -42,20 +42,23 @@ public class TaskItemService : ITaskItemService
             Priority = createDto.Priority,
             AssigneeId = createDto.AssigneeId,
             DueAt = createDto.DueAt,
+            AiSuggestionJson = createDto.AiSuggestionJson,
             CreatedAt = DateTime.UtcNow
         };
         await _taskRepository.AddAsync(taskItem);
         await _taskRepository.SaveChangesAsync();
         var assignee = taskItem.AssigneeId.HasValue ? await _userRepository.GetByIdAsync(taskItem.AssigneeId.Value) : null;
-        return Map(taskItem, assignee);
+        return Map(taskItem, assignee, project.Name);
     }
 
     public async Task<TaskItemDto?> GetByIdAsync(Guid id)
     {
-        var taskItem = await _taskRepository.GetByIdAsync(id);
+        var taskItem = await _taskRepository.AsQueryable()
+            .Include(t => t.Project)
+            .FirstOrDefaultAsync(t => t.Id == id);
         if (taskItem == null) return null;
         var assignee = taskItem.AssigneeId.HasValue ? await _userRepository.GetByIdAsync(taskItem.AssigneeId.Value) : null;
-        return Map(taskItem, assignee);
+        return Map(taskItem, assignee, taskItem.Project.Name);
     }
 
     public async Task<IEnumerable<TaskItemDto>> GetByProjectAsync(Guid projectId)
@@ -67,6 +70,7 @@ public class TaskItemService : ITaskItemService
             {
                 Id = t.Id,
                 ProjectId = t.ProjectId,
+                ProjectName = t.Project.Name,
                 Title = t.Title,
                 Description = t.Description,
                 Status = t.Status,
@@ -75,6 +79,7 @@ public class TaskItemService : ITaskItemService
                 AssigneeEmail = t.Assignee != null ? t.Assignee.Email : null,
                 AssigneeName = t.Assignee != null ? t.Assignee.Name : null,
                 DueAt = t.DueAt,
+                AiSuggestionJson = t.AiSuggestionJson,
                 CreatedAt = t.CreatedAt,
                 UpdatedAt = t.UpdatedAt
             })
@@ -95,6 +100,8 @@ public class TaskItemService : ITaskItemService
             q = q.Where(t => t.Title.Contains(kw) || (t.Description != null && t.Description.Contains(kw)));
         }
 
+        if (query.ProjectId.HasValue) q = q.Where(t => t.ProjectId == query.ProjectId.Value);
+        if (query.PendingOnly) q = q.Where(t => t.Status != SmartTask.Domain.Enums.TaskStatus.Completed);
         if (query.Status.HasValue) q = q.Where(t => t.Status == query.Status.Value);
         if (query.Priority.HasValue) q = q.Where(t => t.Priority == query.Priority.Value);
         if (query.AssigneeId.HasValue) q = q.Where(t => t.AssigneeId == query.AssigneeId.Value);
@@ -106,15 +113,17 @@ public class TaskItemService : ITaskItemService
         var dtoQuery = q.Select(t => new TaskItemDto
         {
             Id = t.Id,
+            ProjectId = t.ProjectId,
+            ProjectName = t.Project.Name,
             Title = t.Title,
             Description = t.Description,
             Status = t.Status,
             Priority = t.Priority,
             AssigneeEmail = t.Assignee != null ? t.Assignee.Email : null,
             AssigneeName = t.Assignee != null ? t.Assignee.Name : null,
-            ProjectId = t.ProjectId,
             AssigneeId = t.AssigneeId,
             DueAt = t.DueAt,
+            AiSuggestionJson = t.AiSuggestionJson,
             CreatedAt = t.CreatedAt,
             UpdatedAt = t.UpdatedAt
         });
@@ -140,6 +149,7 @@ public class TaskItemService : ITaskItemService
         taskItem.Priority = createDto.Priority;
         taskItem.AssigneeId = createDto.AssigneeId;
         taskItem.DueAt = createDto.DueAt;
+        taskItem.AiSuggestionJson = createDto.AiSuggestionJson;
         taskItem.UpdatedAt = DateTime.UtcNow;
         await _taskRepository.SaveChangesAsync();
     }
@@ -204,10 +214,11 @@ public class TaskItemService : ITaskItemService
             throw new InvalidOperationException("Tasks can only be assigned to team members.");
     }
 
-    private static TaskItemDto Map(TaskItem t, User? assignee) => new()
+    private static TaskItemDto Map(TaskItem t, User? assignee, string projectName) => new()
     {
         Id = t.Id,
         ProjectId = t.ProjectId,
+        ProjectName = projectName,
         Title = t.Title,
         Description = t.Description,
         Status = t.Status,
@@ -216,6 +227,7 @@ public class TaskItemService : ITaskItemService
         AssigneeEmail = assignee?.Email,
         AssigneeName = assignee?.Name,
         DueAt = t.DueAt,
+        AiSuggestionJson = t.AiSuggestionJson,
         CreatedAt = t.CreatedAt,
         UpdatedAt = t.UpdatedAt
     };

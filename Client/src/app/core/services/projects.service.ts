@@ -35,8 +35,12 @@ export class ProjectsService {
       .pipe(map(() => void 0));
   }
 
-  delete(id: string): Observable<void> {
-    return this.http.delete<ApiResponse<object>>(`${this.baseUrl}/${id}`).pipe(map(() => void 0));
+  archive(id: string): Observable<void> {
+    return this.http.patch<ApiResponse<object>>(`${this.baseUrl}/${id}/archive`, {}).pipe(map(() => void 0));
+  }
+
+  unarchive(id: string): Observable<void> {
+    return this.http.patch<ApiResponse<object>>(`${this.baseUrl}/${id}/unarchive`, {}).pipe(map(() => void 0));
   }
 
   private toParams(query: ProjectQuery): HttpParams {

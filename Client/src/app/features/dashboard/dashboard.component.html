@@ -20,11 +20,31 @@
 
   @if (!loading() && !error() && stats(); as s) {
     <section class="dashboard__kpis">
-      <app-kpi-card label="Projects" [value]="s.totalProjects" tone="primary"></app-kpi-card>
-      <app-kpi-card label="Total Tasks" [value]="s.totalTasks" tone="neutral"></app-kpi-card>
-      <app-kpi-card label="Completed" [value]="s.completedTasks" tone="success"></app-kpi-card>
-      <app-kpi-card label="Pending" [value]="s.pendingTasks" tone="warning"></app-kpi-card>
-      <app-kpi-card label="Upcoming Due" [value]="s.upcomingDueTasks" tone="danger"></app-kpi-card>
+      <app-kpi-card
+        label="Projects"
+        [value]="s.totalProjects"
+        tone="primary"
+        [link]="canViewProjects ? '/projects' : null"
+      ></app-kpi-card>
+      <app-kpi-card label="Total Tasks" [value]="s.totalTasks" tone="neutral" link="/tasks"></app-kpi-card>
+      <app-kpi-card
+        label="Completed"
+        [value]="s.completedTasks"
+        tone="success"
+        link="/tasks?status=Completed"
+      ></app-kpi-card>
+      <app-kpi-card
+        label="Pending"
+        [value]="s.pendingTasks"
+        tone="warning"
+        link="/tasks?pending=1"
+      ></app-kpi-card>
+      <app-kpi-card
+        label="Upcoming Due"
+        [value]="s.upcomingDueTasks"
+        tone="danger"
+        link="/tasks?dueFrom=now&sortBy=DueAt"
+      ></app-kpi-card>
     </section>
 
     <section class="dashboard__grid">

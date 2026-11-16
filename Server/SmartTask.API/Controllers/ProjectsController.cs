@@ -14,15 +14,18 @@ public class ProjectsController : ControllerBase
 {
     private readonly IProjectService _projectService;
     private readonly IValidator<ProjectQueryDto> _projectQueryValidator;
+    private readonly IValidator<ProjectCreateDto> _projectCreateValidator;
     private readonly IValidator<ProjectManagerAssignDto> _projectManagerAssignValidator;
 
     public ProjectsController(
         IProjectService projectService,
         IValidator<ProjectQueryDto> projectQueryValidator,
+        IValidator<ProjectCreateDto> projectCreateValidator,
         IValidator<ProjectManagerAssignDto> projectManagerAssignValidator)
     {
         _projectService = projectService;
         _projectQueryValidator = projectQueryValidator;
+        _projectCreateValidator = projectCreateValidator;
         _projectManagerAssignValidator = projectManagerAssignValidator;
     }
 
@@ -30,6 +33,11 @@ public class ProjectsController : ControllerBase
     [Authorize(Roles = "Admin,ProjectManager")]
     public async Task<ActionResult<ApiResponse<ProjectDto>>> CreateAsync([FromBody] ProjectCreateDto createDto)
     {
+        var validationResult = await _projectCreateValidator.ValidateAsync(createDto);
+        if (!validationResult.IsValid)
+        {
+            return BadRequest(ApiResponse<ProjectDto>.Error(string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage)), 400));
+        }
         var project = await _projectService.CreateAsync(GetUserId(), GetUserRole(), createDto);
         return Ok(ApiResponse<ProjectDto>.Ok(project, "Project created."));
     }
@@ -61,6 +69,11 @@ public class ProjectsController : ControllerBase
     [Authorize(Roles = "Admin,ProjectManager")]
     public async Task<ActionResult<ApiResponse<ProjectDto>>> UpdateAsync(Guid id, [FromBody] ProjectCreateDto createDto)
     {
+        var validationResult = await _projectCreateValidator.ValidateAsync(createDto);
+        if (!validationResult.IsValid)
+        {
+            return BadRequest(ApiResponse<ProjectDto>.Error(string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage)), 400));
+        }
         await _projectService.UpdateAsync(id, createDto);
         return Ok(ApiResponse<ProjectDto>.Ok(null, "Project updated."));
     }
@@ -79,12 +92,20 @@ public class ProjectsController : ControllerBase
         return Ok(ApiResponse<object>.Ok(null, "Project manager assigned."));
     }
 
-    [HttpDelete("{id:guid}")]
-    [Authorize(Roles = "Admin")]
-    public async Task<ActionResult<ApiResponse<object>>> DeleteAsync(Guid id)
+    [HttpPatch("{id:guid}/archive")]
+    [Authorize(Roles = "Admin,ProjectManager")]
+    public async Task<ActionResult<ApiResponse<object>>> ArchiveAsync(Guid id)
     {
-        await _projectService.DeleteAsync(id);
-        return Ok(ApiResponse<object>.Ok(null, "Project deleted."));
+        await _projectService.ArchiveAsync(id);
+        return Ok(ApiResponse<object>.Ok(null, "Project archived."));
+    }
+
+    [HttpPatch("{id:guid}/unarchive")]
+    [Authorize(Roles = "Admin,ProjectManager")]
+    public async Task<ActionResult<ApiResponse<object>>> UnarchiveAsync(Guid id)
+    {
+        await _projectService.UnarchiveAsync(id);
+        return Ok(ApiResponse<object>.Ok(null, "Project restored."));
     }
 
     private Guid GetUserId() => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);

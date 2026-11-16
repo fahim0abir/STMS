@@ -36,6 +36,11 @@
   }
 
   @if (!loading() && !error()) {
+    <label class="projects__toggle">
+      <input type="checkbox" [checked]="includeArchived()" (change)="onIncludeArchivedChange($event)" />
+      <span>Show archived projects</span>
+    </label>
+
     <app-project-table
       [projects]="projects()"
       [canManage]="canManage"
@@ -43,7 +48,8 @@
       [sortOrder]="sortOrder()"
       (sortChange)="onSort($event)"
       (edit)="openEdit($event)"
-      (delete)="remove($event)"
+      (archive)="archive($event)"
+      (restore)="restore($event)"
     ></app-project-table>
 
     <div class="projects__footer">

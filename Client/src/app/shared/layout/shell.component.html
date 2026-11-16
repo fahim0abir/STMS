@@ -1,6 +1,6 @@
 ﻿<aside class="shell__sidebar" [class.open]="sidebarOpen()">
   <div class="shell__brand">
-    <a routerLink="/dashboard" class="shell__brand-link">SmartTask</a>
+    <a routerLink="/dashboard" class="shell__brand-link" (click)="closeSidebar()">SmartTask</a>
     <button class="shell__close" (click)="toggleSidebar()">&times;</button>
   </div>
   <nav class="shell__nav">
@@ -11,6 +11,7 @@
             [routerLink]="link.path"
             routerLinkActive="shell__nav-link--active"
             class="shell__nav-link"
+            (click)="closeSidebar()"
             >{{ link.label }}</a
           >
         </li>
@@ -19,12 +20,12 @@
   </nav>
   <div class="shell__footer">
     @if (currentUser(); as user) {
-      <a [routerLink]="'/profile'" class="shell__user shell__user--link" title="Edit your profile">
+      <a [routerLink]="'/profile'" class="shell__user shell__user--link" title="Edit your profile" (click)="closeSidebar()">
         <span class="shell__user-name">{{ user.name || user.email }}</span>
         <app-badge variant="secondary" [label]="user.role || ''"></app-badge>
       </a>
     }
-    <app-btn variant="ghost" (click)="logout()">Logout</app-btn>
+    <app-btn variant="danger" (click)="logout()">Logout</app-btn>
   </div>
 </aside>
 

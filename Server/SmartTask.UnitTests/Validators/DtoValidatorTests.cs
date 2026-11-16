@@ -14,7 +14,13 @@ public class ProjectCreateDtoValidatorTests
     [Fact]
     public void Valid_Project_HasNoErrors()
     {
-        var result = _validator.TestValidate(new ProjectCreateDto { Name = "Website revamp", Description = "Q3 work" });
+        var result = _validator.TestValidate(new ProjectCreateDto
+        {
+            Name = "Website revamp",
+            Description = "Q3 work",
+            TechStack = "ASP.NET Core 9, Angular 18",
+            StartDate = DateTime.UtcNow
+        });
 
         result.ShouldNotHaveAnyErrors();
     }
@@ -28,9 +34,9 @@ public class ProjectCreateDtoValidatorTests
     }
 
     [Fact]
-    public void NameLongerThan100Characters_ReportsError()
+    public void NameLongerThan200Characters_ReportsError()
     {
-        var result = _validator.TestValidate(new ProjectCreateDto { Name = new string('a', 101) });
+        var result = _validator.TestValidate(new ProjectCreateDto { Name = new string('a', 201) });
 
         result.ShouldHaveValidationErrorFor(x => x.Name);
     }
@@ -84,12 +90,12 @@ public class TaskItemCreateDtoValidatorTests
     }
 
     [Fact]
-    public void DescriptionLongerThan1000Characters_ReportsError()
+    public void DescriptionLongerThan4000Characters_ReportsError()
     {
         var result = _validator.TestValidate(new TaskItemCreateDto
         {
             Title = "Valid",
-            Description = new string('d', 1001)
+            Description = new string('d', 4001)
         });
 
         result.ShouldHaveValidationErrorFor(x => x.Description);

@@ -10,5 +10,6 @@ public interface IProjectService
     Task<PagedResult<ProjectDto>> GetPagedAsync(ProjectQueryDto query, Guid currentUserId, string currentUserRole);
     Task UpdateAsync(Guid id, ProjectCreateDto createDto);
     Task AssignManagerAsync(Guid id, Guid managerId);
-    Task DeleteAsync(Guid id);
+    Task ArchiveAsync(Guid id);
+    Task UnarchiveAsync(Guid id);
 }

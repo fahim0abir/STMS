@@ -46,7 +46,7 @@ public class DashboardService : IDashboardService
                 break;
         }
 
-        var totalProjects = await projects.CountAsync();
+        var totalProjects = await projects.CountAsync(p => p.Status != ProjectStatus.Archived);
         var totalTasks = await tasks.CountAsync();
         var completedTasks = await tasks.CountAsync(t => t.Status == TaskStatus.Completed);
         var pendingTasks = await tasks.CountAsync(t => t.Status != TaskStatus.Completed);

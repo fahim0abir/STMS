@@ -28,7 +28,8 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
                 ["Jwt:Audience"] = "SmartTaskClients",
                 ["RateLimiting:Default"] = "10000",
                 ["RateLimiting:Auth"] = "10000",
-                ["RateLimiting:Enhance"] = "10000"
+                ["RateLimiting:Enhance"] = "10000",
+                ["AI:GoogleAIStudio:ApiKey"] = ""
             });
         });
 

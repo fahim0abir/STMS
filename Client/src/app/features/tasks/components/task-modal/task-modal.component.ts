@@ -54,6 +54,8 @@ export class TaskModalComponent implements OnChanges {
   readonly aiMessage = signal('');
   readonly aiUsedFallback = signal(false);
   readonly aiSuggestion = signal<AiEnhanceResult | null>(null);
+  readonly storedSuggestion = signal<AiEnhanceResult | null>(null);
+  readonly aiSuggestionJson = signal<string | null>(null);
   readonly canRevert = signal(false);
 
   private descriptionBeforeAccept: string | null = null;
@@ -68,12 +70,13 @@ export class TaskModalComponent implements OnChanges {
     label,
   }));
 
-  readonly maxDescriptionLength = AI_MAX_LENGTH;
+  readonly maxDescriptionLength = 4000;
+  readonly aiMaxLength = AI_MAX_LENGTH;
 
   readonly form = this.fb.nonNullable.group({
     projectId: [''],
     title: ['', [Validators.required, Validators.maxLength(200)]],
-    description: ['', [Validators.maxLength(AI_MAX_LENGTH)]],
+    description: ['', [Validators.maxLength(4000)]],
     status: [TaskStatus.ToDo as TaskStatus, [Validators.required]],
     priority: [TaskPriority.Medium as TaskPriority, [Validators.required]],
     assigneeId: [''],
@@ -87,6 +90,8 @@ export class TaskModalComponent implements OnChanges {
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['open']?.currentValue === true || changes['task']) {
       this.resetState();
+      this.aiSuggestionJson.set(this.task?.aiSuggestionJson ?? null);
+      this.storedSuggestion.set(this.parseStoredSuggestion(this.task?.aiSuggestionJson));
       this.form.reset({
         projectId: '',
         title: this.task?.title ?? '',
@@ -137,7 +142,20 @@ export class TaskModalComponent implements OnChanges {
     if (!suggestion) return;
 
     this.descriptionBeforeAccept = this.form.controls.description.value;
-    this.form.controls.description.setValue(suggestion.enhancedDescription);
+
+    const extras: string[] = [];
+    if (suggestion.acceptanceCriteria?.length) {
+      extras.push(`**Acceptance criteria**\n${suggestion.acceptanceCriteria.map((item) => `- ${item}`).join('\n')}`);
+    }
+    if (suggestion.subtasks?.length) {
+      extras.push(`**Subtasks**\n${suggestion.subtasks.map((item) => `- ${item}`).join('\n')}`);
+    }
+    if (suggestion.estimatedHours) {
+      extras.push(`**Estimated effort:** ~${suggestion.estimatedHours}h`);
+    }
+
+    const combined = [suggestion.enhancedDescription, ...extras].filter(Boolean).join('\n\n');
+    this.form.controls.description.setValue(combined.slice(0, this.maxDescriptionLength));
 
     if (!this.form.controls.title.value.trim() && suggestion.suggestedTitle) {
       this.form.controls.title.setValue(suggestion.suggestedTitle);
@@ -145,9 +163,11 @@ export class TaskModalComponent implements OnChanges {
 
     this.form.controls.priority.setValue(Number(suggestion.suggestedPriority) as TaskPriority);
 
+    this.aiSuggestionJson.set(JSON.stringify(suggestion));
+    this.storedSuggestion.set(suggestion);
     this.aiSuggestion.set(null);
     this.canRevert.set(true);
-    this.aiMessage.set('AI suggestion applied.');
+    this.aiMessage.set('AI suggestion applied and will be saved with the task.');
   }
 
   rejectSuggestion(): void {
@@ -184,6 +204,7 @@ export class TaskModalComponent implements OnChanges {
       priority: Number(raw.priority) as TaskPriority,
       assigneeId: raw.assigneeId || null,
       dueAt: raw.dueAt ? new Date(raw.dueAt).toISOString() : null,
+      aiSuggestionJson: this.aiSuggestionJson(),
     };
 
     this.save.emit({
@@ -200,10 +221,21 @@ export class TaskModalComponent implements OnChanges {
 
   private resetState(): void {
     this.aiSuggestion.set(null);
+    this.storedSuggestion.set(null);
+    this.aiSuggestionJson.set(null);
     this.aiMessage.set('');
     this.aiUsedFallback.set(false);
     this.aiLoading.set(false);
     this.canRevert.set(false);
     this.descriptionBeforeAccept = null;
+  }
+
+  private parseStoredSuggestion(json?: string | null): AiEnhanceResult | null {
+    if (!json) return null;
+    try {
+      return JSON.parse(json) as AiEnhanceResult;
+    } catch {
+      return null;
+    }
   }
 }

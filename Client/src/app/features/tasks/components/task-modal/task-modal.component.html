@@ -62,6 +62,16 @@
         </p>
       }
 
+      @if (!aiSuggestion() && storedSuggestion(); as stored) {
+        <p class="modal__ai-message">
+          Stored AI suggestion ({{ stored.model }}) · {{ stored.acceptanceCriteria.length }} criteria ·
+          {{ stored.subtasks.length }} subtasks
+          @if (stored.estimatedHours) {
+            · ~{{ stored.estimatedHours }}h
+          }
+        </p>
+      }
+
       @if (aiSuggestion(); as suggestion) {
         <div class="modal__suggestion">
           <div class="modal__suggestion-head">

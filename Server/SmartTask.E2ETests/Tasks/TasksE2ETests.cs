@@ -192,7 +192,7 @@ public class TasksE2ETests
     [Fact]
     public async Task AssignTask_AsProjectManager_OnForeignProject_Returns403()
     {
-        var create = await _fixture.Api.PostAsync("/api/projects", new { Name = $"Foreign {Guid.NewGuid():N}" }, _fixture.Admin.AccessToken);
+        var create = await _fixture.Api.PostAsync("/api/projects", new { Name = $"Foreign {Guid.NewGuid():N}", StartDate = DateTime.UtcNow, TechStack = "ASP.NET Core 9" }, _fixture.Admin.AccessToken);
         var project = await ApiClient.ReadAsync<ProjectDto>(create);
         var payload = new { Title = "Foreign task", Status = TaskStatus.ToDo, Priority = TaskPriority.Low };
         var task = await _fixture.Api.PostAsync($"/api/taskitems?projectId={project.Data!.Id}", payload, _fixture.Admin.AccessToken);
@@ -211,7 +211,7 @@ public class TasksE2ETests
     {
         var create = await _fixture.Api.PostAsync(
             "/api/projects",
-            new { Name = $"Owned {Guid.NewGuid():N}", ManagerId = TestData.ManagerId },
+            new { Name = $"Owned {Guid.NewGuid():N}", ManagerId = TestData.ManagerId, StartDate = DateTime.UtcNow, TechStack = "ASP.NET Core 9" },
             _fixture.Admin.AccessToken);
         var project = await ApiClient.ReadAsync<ProjectDto>(create);
         var payload = new { Title = "Owned task", Status = TaskStatus.ToDo, Priority = TaskPriority.Low };

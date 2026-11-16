@@ -41,8 +41,12 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<Project>(entity =>
         {
             entity.HasKey(p => p.Id);
-            entity.Property(p => p.Name).IsRequired().HasMaxLength(100);
+            entity.Property(p => p.Name).IsRequired().HasMaxLength(200);
             entity.Property(p => p.Description).HasMaxLength(500);
+            entity.Property(p => p.ClientName).HasMaxLength(200);
+            entity.Property(p => p.TechStack).IsRequired().HasMaxLength(200);
+            entity.Property(p => p.Status).IsRequired();
+            entity.Property(p => p.StartDate).IsRequired();
             entity.HasOne(p => p.Manager).WithMany(u => u.ManagedProjects).HasForeignKey(p => p.ManagerId);
             entity.HasMany(p => p.Tasks).WithOne(t => t.Project).HasForeignKey(t => t.ProjectId);
         });
@@ -51,7 +55,8 @@ public class ApplicationDbContext : DbContext
         {
             entity.HasKey(t => t.Id);
             entity.Property(t => t.Title).IsRequired().HasMaxLength(200);
-            entity.Property(t => t.Description).HasMaxLength(1000);
+            entity.Property(t => t.Description).HasMaxLength(4000);
+            entity.Property(t => t.AiSuggestionJson);
             entity.HasOne(t => t.Project).WithMany(p => p.Tasks).HasForeignKey(t => t.ProjectId);
             entity.HasOne(t => t.Assignee).WithMany(u => u.Tasks).HasForeignKey(t => t.AssigneeId).IsRequired(false);
         });

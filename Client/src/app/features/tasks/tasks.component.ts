@@ -1,4 +1,5 @@
 ﻿import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { TaskPriority, TaskStatus, TASK_PRIORITY_LABELS, TASK_STATUS_LABELS } from '../../shared/models/enums';
@@ -39,6 +40,7 @@ export class TasksComponent {
   private readonly usersService = inject(UsersService);
   private readonly authService = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly route = inject(ActivatedRoute);
 
   readonly currentUserId = this.authService.currentUserValue?.id ?? '';
   readonly assignees = signal<User[]>([]);
@@ -57,6 +59,8 @@ export class TasksComponent {
   readonly statusFilter = signal<TaskStatus | undefined>(undefined);
   readonly priorityFilter = signal<TaskPriority | undefined>(undefined);
   readonly mineOnly = signal(false);
+  readonly pendingOnly = signal(false);
+  readonly projectFilter = signal<string | undefined>(undefined);
   readonly dueFrom = signal('');
   readonly dueTo = signal('');
 
@@ -103,7 +107,40 @@ export class TasksComponent {
         this.pageNumber.set(1);
         this.load();
       });
+    this.applyQueryParams();
+    this.ensureProjects();
+    if (this.canManage) {
+      this.ensureAssignees();
+    }
     this.load();
+  }
+
+  private applyQueryParams(): void {
+    const params = this.route.snapshot.queryParamMap;
+    const status = params.get('status');
+    if (status && status in TaskStatus) {
+      this.statusFilter.set(TaskStatus[status as keyof typeof TaskStatus]);
+    }
+    const priority = params.get('priority');
+    if (priority && priority in TaskPriority) {
+      this.priorityFilter.set(TaskPriority[priority as keyof typeof TaskPriority]);
+    }
+    const projectId = params.get('projectId');
+    if (projectId) {
+      this.projectFilter.set(projectId);
+    }
+    const dueFrom = params.get('dueFrom');
+    if (dueFrom) {
+      this.dueFrom.set(dueFrom === 'now' ? new Date().toISOString().slice(0, 10) : dueFrom);
+    }
+    if (params.get('pending') === '1') {
+      this.pendingOnly.set(true);
+    }
+    const sortBy = params.get('sortBy');
+    if (sortBy) {
+      this.sortBy.set(sortBy);
+      this.sortOrder.set('asc');
+    }
   }
 
   onSearch(value: string): void {
@@ -141,6 +178,12 @@ export class TasksComponent {
 
   onPriorityChange(priority: TaskPriority | undefined): void {
     this.priorityFilter.set(priority);
+    this.pageNumber.set(1);
+    this.load();
+  }
+
+  onProjectChange(event: Event): void {
+    this.projectFilter.set((event.target as HTMLSelectElement).value || undefined);
     this.pageNumber.set(1);
     this.load();
   }
@@ -235,6 +278,8 @@ export class TasksComponent {
       keyword: this.search() || undefined,
       status: this.statusFilter(),
       priority: this.priorityFilter(),
+      projectId: this.projectFilter(),
+      pendingOnly: this.pendingOnly() || undefined,
       assigneeId: this.mineOnly() ? this.authService.currentUserValue?.id : undefined,
       dueFrom: this.toIsoStart(this.dueFrom()),
       dueTo: this.toIsoEnd(this.dueTo()),
@@ -268,6 +313,16 @@ export class TasksComponent {
       .subscribe({
         next: () => this.load(),
         error: (err) => this.error.set(err?.error?.message || 'Failed to update task status.'),
+      });
+  }
+
+  onTaskAssign(event: { task: TaskItem; assigneeId: string | null }): void {
+    this.tasksService
+      .assign(event.task.id, event.assigneeId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => this.load(),
+        error: (err) => this.error.set(err?.error?.message || 'Failed to assign task.'),
       });
   }
 

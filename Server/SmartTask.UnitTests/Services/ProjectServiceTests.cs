@@ -116,16 +116,21 @@ public class ProjectServiceTests
     }
 
     [Fact]
-    public async Task DeleteAsync_RemovesProject()
+    public async Task ArchiveAsync_SetsArchivedStatus_WithoutRemovingRow()
     {
         using var db = new TestDatabase();
         var owner = db.AddUser();
         var project = db.AddProject(owner.Id);
         var service = new ProjectService(db.Projects, db.Users);
 
-        await service.DeleteAsync(project.Id);
+        await service.ArchiveAsync(project.Id);
 
-        Assert.Empty(db.Context.Projects);
+        Assert.Single(db.Context.Projects);
+        Assert.Equal(ProjectStatus.Archived, db.Context.Projects.Single().Status);
+
+        await service.UnarchiveAsync(project.Id);
+
+        Assert.Equal(ProjectStatus.Active, db.Context.Projects.Single().Status);
     }
 
     [Fact]

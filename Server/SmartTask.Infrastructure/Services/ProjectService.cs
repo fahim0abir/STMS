@@ -45,6 +45,11 @@ public class ProjectService : IProjectService
             Id = Guid.NewGuid(),
             Name = createDto.Name,
             Description = createDto.Description,
+            ClientName = createDto.ClientName,
+            TechStack = createDto.TechStack,
+            StartDate = createDto.StartDate,
+            EndDate = createDto.EndDate,
+            Status = createDto.Status,
             ManagerId = managerId,
             CreatedAt = DateTime.UtcNow
         };
@@ -56,6 +61,11 @@ public class ProjectService : IProjectService
             Id = project.Id,
             Name = project.Name,
             Description = project.Description,
+            ClientName = project.ClientName,
+            TechStack = project.TechStack,
+            StartDate = project.StartDate,
+            EndDate = project.EndDate,
+            Status = project.Status,
             ManagerId = project.ManagerId,
             ManagerEmail = manager?.Email ?? string.Empty,
             ManagerName = manager?.Name
@@ -71,6 +81,11 @@ public class ProjectService : IProjectService
                 Id = p.Id,
                 Name = p.Name,
                 Description = p.Description,
+                ClientName = p.ClientName,
+                TechStack = p.TechStack,
+                StartDate = p.StartDate,
+                EndDate = p.EndDate,
+                Status = p.Status,
                 ManagerId = p.ManagerId,
                 ManagerEmail = p.Manager.Email,
                 ManagerName = p.Manager.Name
@@ -89,6 +104,11 @@ public class ProjectService : IProjectService
                 Id = p.Id,
                 Name = p.Name,
                 Description = p.Description,
+                ClientName = p.ClientName,
+                TechStack = p.TechStack,
+                StartDate = p.StartDate,
+                EndDate = p.EndDate,
+                Status = p.Status,
                 ManagerId = p.ManagerId,
                 ManagerEmail = p.Manager.Email,
                 ManagerName = p.Manager.Name
@@ -107,7 +127,20 @@ public class ProjectService : IProjectService
         if (!string.IsNullOrWhiteSpace(query.Keyword))
         {
             var kw = query.Keyword.Trim();
-            q = q.Where(p => p.Name.Contains(kw) || (p.Description != null && p.Description.Contains(kw)));
+            q = q.Where(p => p.Name.Contains(kw)
+                || (p.Description != null && p.Description.Contains(kw))
+                || (p.ClientName != null && p.ClientName.Contains(kw))
+                || p.TechStack.Contains(kw));
+        }
+
+        if (!query.IncludeArchived)
+        {
+            q = q.Where(p => p.Status != ProjectStatus.Archived);
+        }
+
+        if (query.Status.HasValue)
+        {
+            q = q.Where(p => p.Status == query.Status.Value);
         }
 
         q = ApplySorting(q, query.SortBy, query.SortOrder);
@@ -117,6 +150,11 @@ public class ProjectService : IProjectService
             Id = p.Id,
             Name = p.Name,
             Description = p.Description,
+            ClientName = p.ClientName,
+            TechStack = p.TechStack,
+            StartDate = p.StartDate,
+            EndDate = p.EndDate,
+            Status = p.Status,
             ManagerId = p.ManagerId,
             ManagerEmail = p.Manager.Email,
             ManagerName = p.Manager.Name
@@ -150,16 +188,32 @@ public class ProjectService : IProjectService
             throw new NotFoundException(nameof(Project), id);
         project.Name = createDto.Name;
         project.Description = createDto.Description;
+        project.ClientName = createDto.ClientName;
+        project.TechStack = createDto.TechStack;
+        project.StartDate = createDto.StartDate;
+        project.EndDate = createDto.EndDate;
+        project.Status = createDto.Status;
         project.UpdatedAt = DateTime.UtcNow;
         await _projectRepository.SaveChangesAsync();
     }
 
-    public async Task DeleteAsync(Guid id)
+    public async Task ArchiveAsync(Guid id)
     {
         var project = await _projectRepository.GetByIdAsync(id);
         if (project == null)
             throw new NotFoundException(nameof(Project), id);
-        await _projectRepository.RemoveAsync(project);
+        project.Status = ProjectStatus.Archived;
+        project.UpdatedAt = DateTime.UtcNow;
+        await _projectRepository.SaveChangesAsync();
+    }
+
+    public async Task UnarchiveAsync(Guid id)
+    {
+        var project = await _projectRepository.GetByIdAsync(id);
+        if (project == null)
+            throw new NotFoundException(nameof(Project), id);
+        project.Status = ProjectStatus.Active;
+        project.UpdatedAt = DateTime.UtcNow;
         await _projectRepository.SaveChangesAsync();
     }
 
@@ -168,6 +222,11 @@ public class ProjectService : IProjectService
         Id = p.Id,
         Name = p.Name,
         Description = p.Description,
+        ClientName = p.ClientName,
+        TechStack = p.TechStack,
+        StartDate = p.StartDate,
+        EndDate = p.EndDate,
+        Status = p.Status,
         ManagerId = p.ManagerId,
         ManagerEmail = managerEmail
     };
@@ -189,6 +248,7 @@ public class ProjectService : IProjectService
         {
             "Name" => desc ? q.OrderByDescending(p => p.Name) : q.OrderBy(p => p.Name),
             "CreatedAt" => desc ? q.OrderByDescending(p => p.CreatedAt) : q.OrderBy(p => p.CreatedAt),
+            "StartDate" => desc ? q.OrderByDescending(p => p.StartDate) : q.OrderBy(p => p.StartDate),
             _ => q.OrderBy(p => p.Name)
         };
     }

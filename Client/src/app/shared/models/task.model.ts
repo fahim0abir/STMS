@@ -4,6 +4,7 @@ import { TaskPriority, TaskStatus, toTaskPriority, toTaskStatus } from './enums'
 export interface TaskItem {
   id: string;
   projectId?: string;
+  projectName?: string;
   title: string;
   description?: string | null;
   status: TaskStatus;
@@ -12,6 +13,7 @@ export interface TaskItem {
   assigneeEmail?: string | null;
   assigneeName?: string | null;
   dueAt?: string | null;
+  aiSuggestionJson?: string | null;
   createdAt?: string;
   updatedAt?: string | null;
 }
@@ -23,12 +25,15 @@ export interface TaskItemUpsert {
   priority: TaskPriority;
   assigneeId?: string | null;
   dueAt?: string | null;
+  aiSuggestionJson?: string | null;
 }
 
 export interface TaskItemQuery extends PageQuery {
   status?: TaskStatus;
   priority?: TaskPriority;
   assigneeId?: string;
+  projectId?: string;
+  pendingOnly?: boolean;
   dueFrom?: string;
   dueTo?: string;
 }

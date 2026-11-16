@@ -1,4 +1,4 @@
-﻿import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { ButtonComponent } from '../ui/button.component';
@@ -30,8 +30,12 @@ export class ShellComponent {
     this.sidebarOpen.update((v) => !v);
   }
 
-  logout(): void {
+  closeSidebar(): void {
     this.sidebarOpen.set(false);
+  }
+
+  logout(): void {
+    this.closeSidebar();
     this.authService.logout();
   }
 

@@ -1,5 +1,6 @@
 ﻿import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { TaskItem } from '../../../../shared/models/task.model';
+import { User } from '../../../../shared/models/user.model';
 import {
   TASK_PRIORITY_LABELS,
   TASK_STATUS_LABELS,
@@ -24,6 +25,7 @@ import { ButtonComponent } from '../../../../shared/ui/button.component';
                 <span>{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
               }
             </th>
+            <th>Project</th>
             <th>Status</th>
             <th>Priority</th>
             <th>Assignee</th>
@@ -36,6 +38,7 @@ import { ButtonComponent } from '../../../../shared/ui/button.component';
           @for (task of tasks; track task.id) {
             <tr>
               <td class="table__title">{{ task.title }}</td>
+              <td class="table__muted">{{ task.projectName || '—' }}</td>
               <td>
                 @if (canUpdateStatus(task)) {
                   <select class="table__status" (change)="onStatusChange(task, $event)">
@@ -48,7 +51,25 @@ import { ButtonComponent } from '../../../../shared/ui/button.component';
                 }
               </td>
               <td><app-badge [variant]="priorityVariant(task)" [label]="priorityLabel(task)"></app-badge></td>
-              <td class="table__muted">{{ task.assigneeName || task.assigneeEmail || 'Unassigned' }}</td>
+              <td class="table__muted">
+                @if (canManage) {
+                  <select class="table__status" (change)="onAssigneeChange(task, $event)">
+                    <option value="" [selected]="!task.assigneeId">Unassigned</option>
+                    @if (task.assigneeId && !hasAssignee(task.assigneeId)) {
+                      <option [value]="task.assigneeId" selected>
+                        {{ task.assigneeName || task.assigneeEmail || 'Current assignee' }}
+                      </option>
+                    }
+                    @for (user of assignees; track user.id) {
+                      <option [value]="user.id" [selected]="user.id === task.assigneeId">
+                        {{ user.name || user.email }}
+                      </option>
+                    }
+                  </select>
+                } @else {
+                  {{ task.assigneeName || task.assigneeEmail || 'Unassigned' }}
+                }
+              </td>
               @if (canManage) {
                 <td class="table__actions">
                   <app-btn size="sm" variant="outline" (click)="edit.emit(task)">Edit</app-btn>
@@ -61,7 +82,7 @@ import { ButtonComponent } from '../../../../shared/ui/button.component';
           }
           @if (!tasks.length) {
             <tr>
-              <td [attr.colspan]="canManage ? 5 : 4" class="table__empty">No tasks found.</td>
+              <td [attr.colspan]="canManage ? 6 : 5" class="table__empty">No tasks found.</td>
             </tr>
           }
         </tbody>
@@ -107,6 +128,7 @@ export class TaskTableComponent {
   @Input() canManage = false;
   @Input() canDelete = false;
   @Input() currentUserId = '';
+  @Input() assignees: User[] = [];
   @Input() sortBy = 'CreatedAt';
   @Input() sortOrder: 'asc' | 'desc' = 'desc';
 
@@ -114,6 +136,7 @@ export class TaskTableComponent {
   @Output() edit = new EventEmitter<TaskItem>();
   @Output() delete = new EventEmitter<TaskItem>();
   @Output() statusChange = new EventEmitter<{ task: TaskItem; status: TaskStatus }>();
+  @Output() assign = new EventEmitter<{ task: TaskItem; assigneeId: string | null }>();
 
   readonly statusOptions = Object.entries(TASK_STATUS_LABELS).map(([value, label]) => ({
     value: Number(value) as TaskStatus,
@@ -128,6 +151,16 @@ export class TaskTableComponent {
     const value = Number((event.target as HTMLSelectElement).value) as TaskStatus;
     if (value === task.status) return;
     this.statusChange.emit({ task, status: value });
+  }
+
+  hasAssignee(assigneeId: string): boolean {
+    return this.assignees.some((user) => user.id === assigneeId);
+  }
+
+  onAssigneeChange(task: TaskItem, event: Event): void {
+    const value = (event.target as HTMLSelectElement).value || null;
+    if ((task.assigneeId ?? null) === value) return;
+    this.assign.emit({ task, assigneeId: value });
   }
 
   statusLabel(task: TaskItem): string {

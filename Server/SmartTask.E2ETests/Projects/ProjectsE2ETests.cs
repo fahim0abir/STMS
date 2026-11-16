@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using SmartTask.API;
 using SmartTask.Application.DTOs;
+using SmartTask.Domain.Enums;
 using SmartTask.E2ETests.Infrastructure;
 
 namespace SmartTask.E2ETests.Projects;
@@ -20,7 +21,7 @@ public class ProjectsE2ETests
     public async Task CreateProject_AsProjectManager_IsVisibleToOwnerOnly()
     {
         var name = $"Gamma E2E Project {Guid.NewGuid():N}";
-        var create = await _fixture.Api.PostAsync("/api/projects", new { Name = name, Description = "Created by E2E suite" }, _fixture.Manager.AccessToken);
+        var create = await _fixture.Api.PostAsync("/api/projects", new { Name = name, Description = "Created by E2E suite", StartDate = DateTime.UtcNow, TechStack = "ASP.NET Core 9" }, _fixture.Manager.AccessToken);
 
         Assert.Equal(HttpStatusCode.OK, create.StatusCode);
         var created = await ApiClient.ReadAsync<ProjectDto>(create);
@@ -44,36 +45,47 @@ public class ProjectsE2ETests
     [Fact]
     public async Task CreateProject_AsTeamMember_Returns403()
     {
-        var response = await _fixture.Api.PostAsync("/api/projects", new { Name = "Forbidden Project" }, _fixture.Member.AccessToken);
+        var response = await _fixture.Api.PostAsync("/api/projects", new { Name = "Forbidden Project", StartDate = DateTime.UtcNow, TechStack = "ASP.NET Core 9" }, _fixture.Member.AccessToken);
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Fact]
-    public async Task DeleteProject_AsProjectManager_Returns403_AsAdmin_Deletes()
+    public async Task ArchiveProject_HidesFromDefaultList_RestoreBringsItBack()
     {
-        var create = await _fixture.Api.PostAsync("/api/projects", new { Name = $"Deletable {Guid.NewGuid():N}" }, _fixture.Admin.AccessToken);
+        var name = $"Archivable {Guid.NewGuid():N}";
+        var create = await _fixture.Api.PostAsync("/api/projects", new { Name = name, StartDate = DateTime.UtcNow, TechStack = "ASP.NET Core 9" }, _fixture.Admin.AccessToken);
         var created = await ApiClient.ReadAsync<ProjectDto>(create);
         var projectId = created.Data!.Id;
 
-        var managerDelete = await _fixture.Api.DeleteAsync($"/api/projects/{projectId}", _fixture.Manager.AccessToken);
-        Assert.Equal(HttpStatusCode.Forbidden, managerDelete.StatusCode);
+        var managerArchive = await _fixture.Api.PatchAsync($"/api/projects/{projectId}/archive", new { }, _fixture.Manager.AccessToken);
+        Assert.Equal(HttpStatusCode.OK, managerArchive.StatusCode);
 
-        var adminDelete = await _fixture.Api.DeleteAsync($"/api/projects/{projectId}", _fixture.Admin.AccessToken);
-        Assert.Equal(HttpStatusCode.OK, adminDelete.StatusCode);
+        var defaultList = await _fixture.Api.GetAsync($"/api/projects/paged?keyword={Uri.EscapeDataString(name)}", _fixture.Admin.AccessToken);
+        var defaultBody = await ApiClient.ReadAsync<PagedResult<ProjectDto>>(defaultList);
+        Assert.Empty(defaultBody.Data!.Items);
 
-        var afterDelete = await _fixture.Api.GetAsync($"/api/projects/{projectId}", _fixture.Admin.AccessToken);
-        Assert.Equal(HttpStatusCode.NotFound, afterDelete.StatusCode);
+        var archivedList = await _fixture.Api.GetAsync($"/api/projects/paged?keyword={Uri.EscapeDataString(name)}&includeArchived=true", _fixture.Admin.AccessToken);
+        var archivedBody = await ApiClient.ReadAsync<PagedResult<ProjectDto>>(archivedList);
+        Assert.Single(archivedBody.Data!.Items);
+        Assert.Equal(ProjectStatus.Archived, archivedBody.Data.Items[0].Status);
+
+        var restore = await _fixture.Api.PatchAsync($"/api/projects/{projectId}/unarchive", new { }, _fixture.Admin.AccessToken);
+        Assert.Equal(HttpStatusCode.OK, restore.StatusCode);
+
+        var afterRestore = await _fixture.Api.GetAsync($"/api/projects/{projectId}", _fixture.Admin.AccessToken);
+        var restoredBody = await ApiClient.ReadAsync<ProjectDto>(afterRestore);
+        Assert.Equal(ProjectStatus.Active, restoredBody.Data!.Status);
     }
 
     [Fact]
     public async Task UpdateProject_WithValidPayload_PersistsChanges()
     {
-        var create = await _fixture.Api.PostAsync("/api/projects", new { Name = $"Updatable {Guid.NewGuid():N}" }, _fixture.Admin.AccessToken);
+        var create = await _fixture.Api.PostAsync("/api/projects", new { Name = $"Updatable {Guid.NewGuid():N}", StartDate = DateTime.UtcNow, TechStack = "ASP.NET Core 9" }, _fixture.Admin.AccessToken);
         var created = await ApiClient.ReadAsync<ProjectDto>(create);
         var projectId = created.Data!.Id;
 
         var updatedName = $"Updated {Guid.NewGuid():N}";
-        var update = await _fixture.Api.PutAsync($"/api/projects/{projectId}", new { Name = updatedName, Description = "Updated by E2E" }, _fixture.Admin.AccessToken);
+        var update = await _fixture.Api.PutAsync($"/api/projects/{projectId}", new { Name = updatedName, Description = "Updated by E2E", StartDate = DateTime.UtcNow, TechStack = "ASP.NET Core 9" }, _fixture.Admin.AccessToken);
         Assert.Equal(HttpStatusCode.OK, update.StatusCode);
 
         var fetched = await _fixture.Api.GetAsync($"/api/projects/{projectId}", _fixture.Admin.AccessToken);
@@ -85,7 +97,7 @@ public class ProjectsE2ETests
     [Fact]
     public async Task AssignProjectManager_AsAdmin_ReassignsManager_AsManager_Returns403()
     {
-        var create = await _fixture.Api.PostAsync("/api/projects", new { Name = $"Assignable {Guid.NewGuid():N}" }, _fixture.Admin.AccessToken);
+        var create = await _fixture.Api.PostAsync("/api/projects", new { Name = $"Assignable {Guid.NewGuid():N}", StartDate = DateTime.UtcNow, TechStack = "ASP.NET Core 9" }, _fixture.Admin.AccessToken);
         var created = await ApiClient.ReadAsync<ProjectDto>(create);
         var projectId = created.Data!.Id;
 

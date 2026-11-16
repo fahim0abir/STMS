@@ -1,11 +1,12 @@
 ﻿import { Component, Input, Output, EventEmitter } from '@angular/core';
-import { Project } from '../../../../shared/models/project.model';
+import { PROJECT_STATUS_LABELS, Project, ProjectStatus } from '../../../../shared/models/project.model';
+import { BadgeComponent } from '../../../../shared/ui/badge.component';
 import { ButtonComponent } from '../../../../shared/ui/button.component';
 
 @Component({
   selector: 'app-project-table',
   standalone: true,
-  imports: [ButtonComponent],
+  imports: [BadgeComponent, ButtonComponent],
   template: `
     <div class="table-wrap">
       <table class="table">
@@ -17,7 +18,16 @@ import { ButtonComponent } from '../../../../shared/ui/button.component';
                 <span>{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
               }
             </th>
-            <th>Description</th>
+            <th class="table__sortable" (click)="sort('StartDate')">
+              Start
+              @if (sortBy === 'StartDate') {
+                <span>{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
+              }
+            </th>
+            <th>End</th>
+            <th>Tech stack</th>
+            <th>Client</th>
+            <th>Status</th>
             <th>Manager</th>
             @if (canManage) {
               <th class="table__actions-head">Actions</th>
@@ -28,19 +38,27 @@ import { ButtonComponent } from '../../../../shared/ui/button.component';
           @for (project of projects; track project.id) {
             <tr>
               <td class="table__name">{{ project.name }}</td>
-              <td class="table__muted">{{ project.description || '—' }}</td>
+              <td class="table__muted">{{ formatDate(project.startDate) }}</td>
+              <td class="table__muted">{{ project.endDate ? formatDate(project.endDate) : '—' }}</td>
+              <td class="table__muted">{{ project.techStack || '—' }}</td>
+              <td class="table__muted">{{ project.clientName || '—' }}</td>
+              <td><app-badge [variant]="statusVariant(project)" [label]="statusLabel(project)"></app-badge></td>
               <td class="table__muted">{{ project.managerName || project.managerEmail || 'Unassigned' }}</td>
               @if (canManage) {
                 <td class="table__actions">
                   <app-btn size="sm" variant="outline" (click)="edit.emit(project)">Edit</app-btn>
-                  <app-btn size="sm" variant="danger" (click)="delete.emit(project)">Delete</app-btn>
+                  @if (isArchived(project)) {
+                    <app-btn size="sm" variant="primary" (click)="restore.emit(project)">Restore</app-btn>
+                  } @else {
+                    <app-btn size="sm" variant="danger" (click)="archive.emit(project)">Archive</app-btn>
+                  }
                 </td>
               }
             </tr>
           }
           @if (!projects.length) {
             <tr>
-              <td [attr.colspan]="canManage ? 4 : 3" class="table__empty">No projects found.</td>
+              <td [attr.colspan]="canManage ? 8 : 7" class="table__empty">No projects found.</td>
             </tr>
           }
         </tbody>
@@ -79,10 +97,38 @@ export class ProjectTableComponent {
 
   @Output() sortChange = new EventEmitter<string>();
   @Output() edit = new EventEmitter<Project>();
-  @Output() delete = new EventEmitter<Project>();
+  @Output() archive = new EventEmitter<Project>();
+  @Output() restore = new EventEmitter<Project>();
 
   sort(field: string): void {
     this.sortChange.emit(field);
+  }
+
+  formatDate(value?: string | null): string {
+    if (!value) return '—';
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? '—' : parsed.toLocaleDateString();
+  }
+
+  isArchived(project: Project): boolean {
+    return project.status === ProjectStatus.Archived;
+  }
+
+  statusLabel(project: Project): string {
+    return PROJECT_STATUS_LABELS[project.status] ?? 'Active';
+  }
+
+  statusVariant(project: Project): 'secondary' | 'success' | 'warning' | 'danger' | 'primary' {
+    switch (project.status) {
+      case ProjectStatus.Completed:
+        return 'success';
+      case ProjectStatus.OnHold:
+        return 'warning';
+      case ProjectStatus.Archived:
+        return 'danger';
+      default:
+        return 'primary';
+    }
   }
 }
 
