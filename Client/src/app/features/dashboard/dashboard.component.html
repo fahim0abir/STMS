@@ -31,19 +31,22 @@
         label="Completed"
         [value]="s.completedTasks"
         tone="success"
-        link="/tasks?status=Completed"
+        link="/tasks"
+        [queryParams]="completedQuery"
       ></app-kpi-card>
       <app-kpi-card
         label="Pending"
         [value]="s.pendingTasks"
         tone="warning"
-        link="/tasks?pending=1"
+        link="/tasks"
+        [queryParams]="pendingQuery"
       ></app-kpi-card>
       <app-kpi-card
         label="Upcoming Due"
         [value]="s.upcomingDueTasks"
         tone="danger"
-        link="/tasks?dueFrom=now&sortBy=DueAt"
+        link="/tasks"
+        [queryParams]="dueSoonQuery"
       ></app-kpi-card>
     </section>
 

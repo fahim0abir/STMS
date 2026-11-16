@@ -1,4 +1,5 @@
 ﻿import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { Params } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { forkJoin } from 'rxjs';
 import { DashboardService } from '../../core/services/dashboard.service';
@@ -53,6 +54,10 @@ export class DashboardComponent {
   private readonly authService = inject(AuthService);
 
   readonly canViewProjects = this.authService.hasRole('Admin', 'ProjectManager');
+
+  readonly completedQuery: Params = { status: 'Completed' };
+  readonly pendingQuery: Params = { pending: '1' };
+  readonly dueSoonQuery: Params = { dueFrom: 'now', sortBy: 'DueAt' };
 
   readonly loading = signal(true);
   readonly error = signal('');

@@ -1,5 +1,5 @@
 ﻿import { Component, Input } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Params, RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-kpi-card',
@@ -7,7 +7,12 @@ import { RouterLink } from '@angular/router';
   imports: [RouterLink],
   template: `
     @if (link) {
-      <a class="kpi kpi--{{ tone }} kpi--link" [routerLink]="link" [attr.aria-label]="label + ': ' + value + ' — view details'">
+      <a
+        class="kpi kpi--{{ tone }} kpi--link"
+        [routerLink]="link"
+        [queryParams]="queryParams"
+        [attr.aria-label]="label + ': ' + value + ' — view details'"
+      >
         <span class="kpi__label">{{ label }}</span>
         <span class="kpi__value">{{ value }}</span>
         @if (hint) {
@@ -61,5 +66,6 @@ export class KpiCardComponent {
   @Input() hint = '';
   @Input() tone: 'primary' | 'success' | 'warning' | 'danger' | 'neutral' = 'neutral';
   @Input() link?: string | null = null;
+  @Input() queryParams?: Params | null = null;
 }
 
